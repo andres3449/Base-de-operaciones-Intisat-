@@ -1,0 +1,26 @@
+# Secrets / entorno local
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Node / frontend build
+node_modules/
+webapp/frontend/dist/
+
+# Imagenes de payload recibidas — datos de runtime, no subir
+/images/
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

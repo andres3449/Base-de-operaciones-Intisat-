@@ -1,0 +1,38 @@
+# INTISAT — Sala de monitoreo web (solo el almacenamiento).
+#
+# ClickHouse no tiene binario nativo para Windows, así que corre en Docker.
+# El backend FastAPI (webapp/backend) corre NATIVO en Windows (no en Docker)
+# para poder conectarse sin fricción al socket ZMQ del proceso PyQt5 en
+# 127.0.0.1 — evita el problema de red host.docker.internal vs 127.0.0.1
+# de Docker Desktop. Solo ClickHouse necesita contenedor.
+#
+# Uso:
+#   1. Copiar .env.example a .env y poner una contraseña propia (.env no se sube al repo).
+#   2. docker compose -f docker-compose.web.yml up -d
+#   docker compose -f docker-compose.web.yml down        # detener
+#   docker compose -f docker-compose.web.yml down -v      # detener + borrar datos
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    container_name: intisat_clickhouse
+    ports:
+      - "127.0.0.1:8123:8123"   # HTTP (usado por clickhouse-connect)
+      - "127.0.0.1:9000:9000"   # protocolo nativo
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./webapp/backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    environment:
+      TZ: UTC
+      CLICKHOUSE_DB: intisat
+      CLICKHOUSE_USER: intisat
+      CLICKHOUSE_PASSWORD: ${INTISAT_CH_PASSWORD:?falta INTISAT_CH_PASSWORD — copiar .env.example a .env}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+
+volumes:
+  clickhouse_data:

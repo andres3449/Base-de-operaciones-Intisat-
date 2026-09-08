@@ -1,0 +1,28 @@
+# INTISAT — configuración del backend de la sala de monitoreo.
+# Cualquier valor puede sobreescribirse con una variable de entorno
+# INTISAT_<NOMBRE> (ver config.py) sin tocar este archivo.
+
+zmq:
+  # Puente publicado por Core/telemetry_publisher.py dentro de la app PyQt5.
+  endpoint: "tcp://127.0.0.1:5560"
+
+clickhouse:
+  # Debe coincidir con docker-compose.web.yml
+  host: "127.0.0.1"
+  port: 8123
+  user: "intisat"
+  # No poner la contraseña real aca (este archivo se sube al repo).
+  # Definila con la variable de entorno INTISAT_CH_PASSWORD (misma que usa
+  # docker-compose.web.yml via .env) antes de arrancar el backend.
+  password: "changeme"
+  database: "intisat"
+
+web:
+  host: "0.0.0.0"
+  port: 8000
+
+headless:
+  # headless_receiver.py corre en el mismo servidor y comparte este archivo:
+  # el backend le escribe la seccion `schedule:` y lee `images_dir` de aca,
+  # asi no hay dos lugares con la misma config (evita que se desincronicen).
+  config_path: "../../headless_receiver.yaml"
