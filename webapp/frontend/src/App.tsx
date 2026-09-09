@@ -9,6 +9,8 @@ import { Adcs } from './pages/Adcs'
 import { Comms } from './pages/Comms'
 import { Payload } from './pages/Payload'
 import { Config } from './pages/Config'
+import { Programacion } from './pages/Programacion'
+import { Orbita } from './pages/Orbita'
 
 const MIN_SPLASH_MS = 900
 
@@ -22,7 +24,9 @@ function AnimatedRoutes() {
         <Route path="/adcs" element={<Adcs />} />
         <Route path="/comms" element={<Comms />} />
         <Route path="/payload" element={<Payload />} />
+        <Route path="/orbita" element={<Orbita />} />
         <Route path="/config" element={<Config />} />
+        <Route path="/programacion" element={<Programacion />} />
       </Routes>
     </div>
   )

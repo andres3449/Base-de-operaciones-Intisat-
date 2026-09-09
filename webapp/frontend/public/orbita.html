@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis Orbital — CubeSat</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#080e1a;color:#d0dcea;font-family:system-ui,sans-serif;font-size:14px;min-height:100vh;}
+header{padding:10px 20px;border-bottom:1px solid #1a2840;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+header h1{font-size:15px;font-weight:500;color:#7eb8f7;white-space:nowrap;}
+header span{font-size:11px;color:#3a5070;}
+.app{display:grid;grid-template-columns:300px 1fr 300px;height:calc(100vh - 41px);}
+.panel-left{background:#0b1220;border-right:1px solid #1a2840;overflow-y:auto;padding:16px;}
+.panel-right{background:#0b1220;border-left:1px solid #1a2840;overflow-y:auto;padding:16px;}
+.center{display:flex;flex-direction:column;}
+canvas{flex:1;width:100%;display:block;background:#000810;}
+.status{background:#0b1220;border-top:1px solid #1a2840;padding:8px 16px;display:flex;gap:20px;flex-wrap:wrap;}
+.st{font-size:11px;color:#3a5070;}.st b{color:#c0d4ec;font-weight:500;}
+.sec{font-size:10px;font-weight:600;color:#4a8fd4;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;}
+.group{margin-bottom:18px;}
+.field{margin-bottom:10px;}
+.field label{display:flex;justify-content:space-between;font-size:12px;color:#6a8aaa;margin-bottom:3px;}
+.field label b{color:#b0ccec;font-weight:500;}
+input[type=range]{width:100%;accent-color:#4a8fd4;cursor:pointer;}
+.divider{border:none;border-top:1px solid #1a2840;margin:14px 0;}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.metric{background:#0f1c2e;border:1px solid #1a2840;border-radius:8px;padding:10px 12px;}
+.metric .ml{font-size:10px;color:#3a5070;margin-bottom:3px;}
+.metric .mv{font-size:17px;font-weight:500;color:#7eb8f7;}
+.metric.hi .mv{color:#4caf80;}
+.tl-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;}
+.tl-bar-wrap{flex:1;background:#0f1c2e;border-radius:3px;height:8px;overflow:hidden;}
+.tl-bar{height:100%;border-radius:3px;transition:width .3s;}
+.tl-label{min-width:36px;text-align:right;color:#6a8aaa;}
+.formula-block{background:#0f1c2e;border:1px solid #1a2840;border-radius:8px;padding:12px;margin-bottom:8px;}
+.formula-block .ft{font-size:11px;color:#4a8fd4;margin-bottom:5px;font-weight:500;}
+.formula-block .feq{font-size:12px;color:#c0d4ec;font-family:'Courier New',monospace;line-height:1.8;}
+.formula-block .fval{font-size:12px;color:#4caf80;margin-top:3px;}
+.fvar{color:#7eb8f7;}.fnum{color:#ef9f27;}
+.tle-box{background:#0f1c2e;border:1px solid #1a2840;border-radius:8px;padding:12px;margin-bottom:14px;}
+.tle-box textarea{width:100%;background:#060d18;border:1px solid #1a2840;border-radius:5px;color:#c0d4ec;font-family:'Courier New',monospace;font-size:11px;padding:8px;resize:vertical;min-height:64px;outline:none;line-height:1.6;}
+.tle-box textarea:focus{border-color:#4a8fd4;}
+.tle-btn{width:100%;margin-top:8px;padding:7px;background:#1a3a64;border:1px solid #2a5a9a;border-radius:5px;color:#7eb8f7;font-size:12px;cursor:pointer;font-weight:500;transition:background .2s;}
+.tle-btn:hover{background:#1e4878;}
+.tle-status{font-size:11px;margin-top:6px;padding:5px 8px;border-radius:4px;display:none;}
+.tle-ok{background:#0a2010;border:1px solid #1a4020;color:#4caf80;}
+.tle-err{background:#201008;border:1px solid #5a2010;color:#ef9f27;}
+.tle-params{margin-top:8px;display:none;}
+.tle-param-row{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid #121e30;}
+.tle-param-row span:first-child{color:#3a5070;}
+.tle-param-row span:last-child{color:#7eb8f7;font-family:'Courier New',monospace;}
+.tle-param-row.ignored span:last-child{color:#2a3a50;text-decoration:line-through;}
+.jump-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.jump-btn{padding:7px 4px;background:#0f1c2e;border:1px solid #1a2840;border-radius:5px;color:#7eb8f7;font-size:11px;cursor:pointer;font-weight:500;transition:background .2s,border-color .2s;}
+.jump-btn:hover{background:#1a3a64;border-color:#2a5a9a;}
+#pause-btn.paused{background:#402010;border-color:#5a3010;color:#ef9f27;}
+@media(max-width:900px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 340px auto auto;}
+  .panel-left,.panel-right{border:none;border-bottom:1px solid #1a2840;}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Análisis Orbital — CubeSat</h1>
+  <span>Propagador kepleriano · i · Ω · ω · M₀ · e</span>
+</header>
+<div class="app">
+
+<div class="panel-left">
+  <div class="group">
+    <div class="sec">TLE — Two-Line Element</div>
+    <div class="tle-box">
+      <textarea id="tle-input" spellcheck="false" placeholder="Pega aquí las 2 líneas del TLE...">1 99999U 00000A   24142.13728009  .00000000  00000-0 -80777-5 0    06
+2 99999  97.9387  30.3347 0000397  22.1885   7.8749 14.98600522    02</textarea>
+      <button class="tle-btn" onclick="parseTLE()">▶ Aplicar TLE</button>
+      <div class="tle-status" id="tle-status"></div>
+      <div class="tle-params" id="tle-params"></div>
+    </div>
+  </div>
+  <hr class="divider">
+  <div class="group">
+    <div class="sec">Elementos orbitales (desde TLE)</div>
+    <div class="field"><label>Altitud media (h) <b id="v-alt">550 km</b></label><input type="range" id="c-alt" min="200" max="2000" value="550" step="5"></div>
+    <div class="field"><label>Inclinación (i) <b id="v-inc">97.9°</b></label><input type="range" id="c-inc" min="0" max="180" value="97.9" step="0.1"></div>
+    <div class="field"><label>RAAN (Ω) <b id="v-raan">30.3°</b></label><input type="range" id="c-raan" min="0" max="360" value="30.3" step="0.1"></div>
+    <div class="field"><label>Arg. perigeo (ω) <b id="v-omega">22.2°</b></label><input type="range" id="c-omega" min="0" max="360" value="22.2" step="0.1"></div>
+    <div class="field"><label>Anomalía media (M₀) <b id="v-m0">7.9°</b></label><input type="range" id="c-m0" min="0" max="360" value="7.9" step="0.1"></div>
+  </div>
+  <hr class="divider">
+  <div class="group">
+    <div class="sec">Estación terrena</div>
+    <div class="field"><label>Latitud <b id="v-lat">-12.05°</b></label><input type="range" id="c-lat" min="-90" max="90" value="-12.05" step="0.5"></div>
+    <div class="field"><label>Longitud <b id="v-lon">-77.04°</b></label><input type="range" id="c-lon" min="-180" max="180" value="-77.04" step="0.5"></div>
+    <div class="field"><label>Elevación mínima <b id="v-elmin">5°</b></label><input type="range" id="c-elmin" min="0" max="20" value="5" step="1"></div>
+  </div>
+  <hr class="divider">
+  <div class="group">
+    <div class="sec">Comunicación</div>
+    <div class="field"><label>Bitrate downlink <b id="v-bps">9 kbps</b></label><input type="range" id="c-bps" min="1" max="1000" value="9" step="1"></div>
+    <div class="field"><label>Datos generados <b id="v-dgen">100 KB/h</b></label><input type="range" id="c-dgen" min="1" max="20000" value="100" step="10"></div>
+  </div>
+  <hr class="divider">
+  <div class="group">
+    <div class="sec">Simulación</div>
+    <div class="field"><label>Velocidad <b id="v-speed">30×</b></label><input type="range" id="c-speed" min="1" max="400" value="30" step="1"></div>
+    <button class="tle-btn" id="pause-btn" onclick="togglePause()">⏸ Pausar</button>
+  </div>
+  <hr class="divider">
+  <div class="group">
+    <div class="sec">Saltar en el tiempo</div>
+    <div style="font-size:11px;color:#3a5070;margin-bottom:10px;">Posición del satélite en un momento futuro (relativo al epoch del TLE)</div>
+    <div class="jump-grid">
+      <button class="jump-btn" onclick="jumpBy(1,'hours')">+1 h</button>
+      <button class="jump-btn" onclick="jumpBy(6,'hours')">+6 h</button>
+      <button class="jump-btn" onclick="jumpBy(12,'hours')">+12 h</button>
+      <button class="jump-btn" onclick="jumpBy(1,'days')">+1 día</button>
+      <button class="jump-btn" onclick="jumpBy(3,'days')">+3 días</button>
+      <button class="jump-btn" onclick="jumpBy(7,'days')">+7 días</button>
+    </div>
+    <button class="jump-btn" style="width:100%;margin-top:6px;" onclick="jumpToNow()">▶ Ahora (tiempo real)</button>
+    <div class="field" style="margin-top:10px;">
+      <label>Ir a fecha/hora exacta</label>
+      <input type="datetime-local" id="jump-date" style="width:100%;background:#060d18;border:1px solid #1a2840;border-radius:5px;color:#c0d4ec;padding:6px;font-size:12px;outline:none;">
+      <button class="jump-btn" style="width:100%;margin-top:6px;" onclick="jumpToDate()">Ir a esa fecha</button>
+    </div>
+    <div id="jump-status" style="font-size:11px;color:#4a8fd4;margin-top:8px;"></div>
+  </div>
+</div>
+
+<div class="center">
+  <canvas id="c3d"></canvas>
+  <div class="status">
+    <div class="st">Elevación: <b id="s-el">—</b></div>
+    <div class="st">Distancia: <b id="s-dist">—</b></div>
+    <div class="st">Lat/Lon sat: <b id="s-latlon">—</b></div>
+    <div class="st">Estado: <b id="s-vis" style="color:#ef5350">—</b></div>
+    <div class="st">Fecha/hora: <b id="s-time">—</b></div>
+  </div>
+</div>
+
+<div class="panel-right">
+  <div class="group">
+    <div class="sec">Resultados orbitales</div>
+    <div class="metrics">
+      <div class="metric"><div class="ml">Periodo T</div><div class="mv" id="m-period">—</div></div>
+      <div class="metric"><div class="ml">Velocidad orbital</div><div class="mv" id="m-vel">—</div></div>
+      <div class="metric"><div class="ml">Pases / día</div><div class="mv" id="m-passes">—</div></div>
+      <div class="metric"><div class="ml">Duración / pase</div><div class="mv" id="m-dur">—</div></div>
+      <div class="metric hi"><div class="ml">Contacto / día</div><div class="mv" id="m-contact">—</div></div>
+      <div class="metric"><div class="ml">Radio footprint</div><div class="mv" id="m-fp">—</div></div>
+    </div>
+  </div>
+  <div class="group">
+    <div class="sec">Tiempo en área de cobertura</div>
+    <div style="font-size:11px;color:#3a5070;margin-bottom:8px;">Fracción del día con visibilidad desde la estación</div>
+    <div id="timeline"></div>
+    <div id="link-status" style="font-size:11px;margin-top:8px;padding:8px;border-radius:6px;"></div>
+  </div>
+  <hr class="divider">
+  <div class="group">
+    <div class="sec">Fórmulas aplicadas</div>
+    <div id="formulas"></div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const RE=6371,MU=398600.4418,DEG=Math.PI/180,RAD=180/Math.PI,WE=7.2921150e-5;
+const canvas=document.getElementById('c3d');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setClearColor(0x000810);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,2,1,300000);
+camera.position.set(0,8000,16000);camera.lookAt(0,0,0);
+scene.add(new THREE.AmbientLight(0x334466,1.5));
+const sun=new THREE.DirectionalLight(0xffffff,1.8);sun.position.set(20000,8000,10000);scene.add(sun);
+
+// ── Globo con textura ──────────────────────────────────────────────────────
+const earthGeo=new THREE.SphereGeometry(RE,64,48);
+const earthMat=new THREE.MeshPhongMaterial({color:0x1a3a5c,shininess:8,specular:new THREE.Color(0x112233)});
+const earthMesh=new THREE.Mesh(earthGeo,earthMat);
+scene.add(earthMesh);
+
+const texLoader=new THREE.TextureLoader();
+texLoader.load(
+  'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+  tex=>{earthMat.map=tex;earthMat.color.set(0xffffff);earthMat.needsUpdate=true;},
+  undefined,
+  ()=>{
+    // fallback: wireframe
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(RE+2,36,18),
+      new THREE.MeshBasicMaterial({color:0x1e4d7a,wireframe:true,transparent:true,opacity:0.15})));
+  }
+);
+
+// Grid de referencia
+const gridMat=new THREE.LineBasicMaterial({color:0x1a3050,transparent:true,opacity:0.2});
+for(let lat=-60;lat<=60;lat+=30){
+  const pts=[];for(let l=0;l<=361;l++)pts.push(ll2v(lat,l,RE+8));
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),gridMat));
+}
+for(let lon=0;lon<360;lon+=30){
+  const pts=[];for(let la=-90;la<=90;la+=3)pts.push(ll2v(la,lon,RE+8));
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),gridMat));
+}
+
+function ll2v(lat,lon,r){
+  const ph=(90-lat)*DEG,th=lon*DEG;
+  return new THREE.Vector3(r*Math.sin(ph)*Math.cos(th),r*Math.cos(ph),-r*Math.sin(ph)*Math.sin(th));
+}
+
+let stLat=-12.05,stLon=-77.04;
+const stMat=new THREE.MeshBasicMaterial({color:0xFFD54F});
+const stMesh=new THREE.Mesh(new THREE.SphereGeometry(85,12,12),stMat);
+scene.add(stMesh);
+const satMat=new THREE.MeshBasicMaterial({color:0x4FC3F7});
+const satMesh=new THREE.Mesh(new THREE.SphereGeometry(130,12,12),satMat);
+scene.add(satMesh);
+
+// Aro del plano orbital
+const orbitRingGeo=new THREE.BufferGeometry();
+const orbitRingLine=new THREE.Line(orbitRingGeo,new THREE.LineBasicMaterial({color:0x2a5a9a,transparent:true,opacity:0.35}));
+scene.add(orbitRingLine);
+
+const trailPoints=[];
+const trailGeo=new THREE.BufferGeometry();
+const trailMat=new THREE.LineBasicMaterial({color:0x4FC3F7,transparent:true,opacity:0.5});
+scene.add(new THREE.Line(trailGeo,trailMat));
+const linkGeo=new THREE.BufferGeometry();
+scene.add(new THREE.Line(linkGeo,new THREE.LineBasicMaterial({color:0x4caf80,transparent:true,opacity:0.9})));
+const fpGeo=new THREE.BufferGeometry();
+scene.add(new THREE.Line(fpGeo,new THREE.LineBasicMaterial({color:0xFFD54F,transparent:true,opacity:0.3})));
+
+// ── Estado orbital ─────────────────────────────────────────────────────────
+let alt=529,inc=97.9387,raan=30.3347,omega=22.1885,m0=7.8749,satEcc=0.0000397;
+let elMin=5,simSpeed=30,bps=9,dgen=100;
+let simTime=0,isDragging=false,prevM={x:0,y:0},rotX=0.3,rotY=0;
+let tleEpochMs=null,paused=false;
+
+// ── Propagador kepleriano completo ─────────────────────────────────────────
+function keplerSolve(M,e){
+  let E=M;
+  for(let i=0;i<50;i++){const dE=(M-(E-e*Math.sin(E)))/(1-e*Math.cos(E));E+=dE;if(Math.abs(dE)<1e-10)break;}
+  return E;
+}
+
+// Matriz de rotación perifocal → ECI a partir de i, Ω, ω
+function getRotMatrix(iR,OR,wR){
+  const cO=Math.cos(OR),sO=Math.sin(OR),cI=Math.cos(iR),sI=Math.sin(iR),cW=Math.cos(wR),sW=Math.sin(wR);
+  return{
+    Xx: cO*cW-sO*sW*cI, Xy:-cO*sW-sO*cW*cI,
+    Yx: sO*cW+cO*sW*cI, Yy:-sO*sW+cO*cW*cI,
+    Zx: sW*sI,          Zy: cW*sI
+  };
+}
+
+function satPos(t){
+  const a=RE+alt;
+  const T=2*Math.PI*Math.sqrt(a*a*a/MU);
+  const Mrad=((m0*DEG)+2*Math.PI*t/T)%(2*Math.PI);
+  const e=satEcc;
+  const E=keplerSolve(Mrad,e);
+  const nu=2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2),Math.sqrt(1-e)*Math.cos(E/2));
+  const r=a*(1-e*Math.cos(E));
+  const xp=r*Math.cos(nu),yp=r*Math.sin(nu);
+  const m=getRotMatrix(inc*DEG,raan*DEG,omega*DEG);
+  const xECI=m.Xx*xp+m.Xy*yp,yECI=m.Yx*xp+m.Yy*yp,zECI=m.Zx*xp+m.Zy*yp;
+  // ECI → ECEF (rotación terrestre)
+  const th=WE*t;
+  return new THREE.Vector3(
+    xECI*Math.cos(th)+yECI*Math.sin(th),
+    zECI,
+    -(-xECI*Math.sin(th)+yECI*Math.cos(th))
+  );
+}
+
+function satLatLon(sv){
+  const r=sv.length();
+  return{lat:RAD*Math.asin(sv.y/r),lon:RAD*Math.atan2(-sv.z,sv.x)};
+}
+
+function updateOrbitRing(){
+  const a=RE+alt,e=satEcc;
+  const m=getRotMatrix(inc*DEG,raan*DEG,omega*DEG);
+  const pts=[];
+  for(let i=0;i<=120;i++){
+    const nu=i/120*2*Math.PI;
+    const rv=a*(1-e*e)/(1+e*Math.cos(nu));
+    const xp=rv*Math.cos(nu),yp=rv*Math.sin(nu);
+    const xE=m.Xx*xp+m.Xy*yp,yE=m.Yx*xp+m.Yy*yp,zE=m.Zx*xp+m.Zy*yp;
+    // Sin rotación terrestre (aro fijo en ECI)
+    pts.push(new THREE.Vector3(xE,zE,yE));
+  }
+  orbitRingGeo.setFromPoints(pts);
+}
+
+function calcAll(){
+  const a=RE+alt,T=2*Math.PI*Math.sqrt(a*a*a/MU)/60,v=Math.sqrt(MU/a);
+  const rho=Math.acos(RE/a),lam=Math.max(0,rho-elMin*DEG),fpR=RE*Math.sin(lam);
+  const durMin=T*lam/Math.PI;
+  const latR=Math.abs(stLat)*DEG,incR=Math.max(inc*DEG,0.001);
+  const passes=latR>incR?0:(1440/T)*(lam/Math.PI)*2*Math.cos(latR/incR*Math.PI/2);
+  const contactMin=passes*durMin,pctDay=contactMin/1440*100;
+  const interpassH=passes>0?(24/passes):24;
+  const backlogKB=dgen*interpassH,downKB=(bps*1000/8)*durMin*60/1024;
+  return{a,T,v,rho,lam,fpR,durMin,passes,contactMin,pctDay,backlogKB,downKB};
+}
+
+function updateFootprint(fpR){
+  const sp=ll2v(stLat,stLon,RE+10),up=sp.clone().normalize();
+  let right=new THREE.Vector3(1,0,0).cross(up).normalize();
+  if(right.length()<0.01)right.set(0,0,1).cross(up).normalize();
+  const fwd=up.clone().cross(right).normalize(),pts=[];
+  for(let i=0;i<=64;i++){const a=i/64*2*Math.PI;pts.push(sp.clone().add(right.clone().multiplyScalar(fpR*Math.cos(a))).add(fwd.clone().multiplyScalar(fpR*Math.sin(a))));}
+  fpGeo.setFromPoints(pts);
+}
+
+function updateMetrics(){
+  const r=calcAll();
+  document.getElementById('m-period').textContent=r.T.toFixed(1)+' min';
+  document.getElementById('m-vel').textContent=r.v.toFixed(2)+' km/s';
+  document.getElementById('m-passes').textContent=r.passes.toFixed(1);
+  document.getElementById('m-dur').textContent=r.durMin.toFixed(1)+' min';
+  document.getElementById('m-contact').textContent=r.contactMin.toFixed(1)+' min';
+  document.getElementById('m-fp').textContent=Math.round(r.fpR)+' km';
+  const pct=Math.min(r.pctDay,100).toFixed(1),npct=(100-r.pctDay).toFixed(1);
+  document.getElementById('timeline').innerHTML=`
+    <div class="tl-row"><span style="font-size:11px;color:#6a8aaa;min-width:90px;">En contacto</span><div class="tl-bar-wrap"><div class="tl-bar" style="width:${pct}%;background:#4caf80;"></div></div><span class="tl-label">${pct}%</span></div>
+    <div class="tl-row"><span style="font-size:11px;color:#6a8aaa;min-width:90px;">Sin contacto</span><div class="tl-bar-wrap"><div class="tl-bar" style="width:${Math.min(100-r.pctDay,100).toFixed(1)}%;background:#ef5350;"></div></div><span class="tl-label">${npct}%</span></div>
+    <div style="font-size:11px;color:#3a5070;margin-top:6px;">${r.contactMin.toFixed(1)} min con señal · ${(1440-r.contactMin).toFixed(0)} min sin señal por día</div>`;
+  const ok=r.downKB>=r.backlogKB,ls=document.getElementById('link-status');
+  ls.style.cssText=`font-size:11px;margin-top:8px;padding:8px;border-radius:6px;background:${ok?'#0a2010':'#201008'};border:1px solid ${ok?'#1a4020':'#402010'};color:${ok?'#4caf80':'#ef9f27'};`;
+  ls.textContent=ok?`Enlace OK: baja ~${Math.round(r.downKB)} KB/pase, acumula ~${Math.round(r.backlogKB)} KB`:`Enlace insuficiente: baja ~${Math.round(r.downKB)} KB/pase pero acumula ~${Math.round(r.backlogKB)} KB`;
+  document.getElementById('formulas').innerHTML=`
+    <div class="formula-block"><div class="ft">Semieje mayor</div><div class="feq"><span class="fvar">a</span> = R<sub>E</sub> + h = <span class="fnum">${r.a.toFixed(0)} km</span></div></div>
+    <div class="formula-block"><div class="ft">Periodo orbital</div><div class="feq"><span class="fvar">T</span> = 2π √(a³/μ)</div><div class="fval">= ${r.T.toFixed(2)} min</div></div>
+    <div class="formula-block"><div class="ft">Velocidad orbital</div><div class="feq"><span class="fvar">v</span> = √(μ / a) = ${r.v.toFixed(3)} km/s</div></div>
+    <div class="formula-block"><div class="ft">Plano orbital (ECI)</div>
+      <div class="feq"><span class="fvar">i</span>=${inc.toFixed(4)}°  <span class="fvar">Ω</span>=${raan.toFixed(4)}°</div>
+      <div class="feq"><span class="fvar">ω</span>=${omega.toFixed(4)}°  <span class="fvar">M₀</span>=${m0.toFixed(4)}°  <span class="fvar">e</span>=${satEcc.toFixed(7)}</div></div>
+    <div class="formula-block"><div class="ft">Footprint</div><div class="feq"><span class="fvar">ρ</span>=arccos(R<sub>E</sub>/a)=${(r.rho*RAD).toFixed(2)}°  <span class="fvar">λ</span>=${(r.lam*RAD).toFixed(2)}°</div><div class="fval">r<sub>fp</sub> = ${Math.round(r.fpR)} km</div></div>
+    <div class="formula-block"><div class="ft">Pases / día</div><div class="feq"><span class="fvar">N</span>=(1440/T)·(λ/π)·2·cos(φ/i·π/2)</div><div class="fval">= ${r.passes.toFixed(2)} → ${r.contactMin.toFixed(1)} min/día (${r.pctDay.toFixed(1)}%)</div></div>`;
+  updateFootprint(r.fpR);
+  updateOrbitRing();
+}
+
+// ── Parser TLE completo ────────────────────────────────────────────────────
+function parseTLE(){
+  const raw=document.getElementById('tle-input').value.trim();
+  const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const st=document.getElementById('tle-status');
+  const tp=document.getElementById('tle-params');
+  st.className='tle-status';
+
+  let l1,l2;
+  if(lines.length>=3){l1=lines[1];l2=lines[2];}
+  else if(lines.length===2){l1=lines[0];l2=lines[1];}
+  else{st.textContent='❌ Se necesitan 2 líneas TLE.';st.className='tle-status tle-err';st.style.display='block';tp.style.display='none';return;}
+  if(l1[0]!=='1'||l2[0]!=='2'){st.textContent='❌ Línea 1 debe empezar con "1", línea 2 con "2".';st.className='tle-status tle-err';st.style.display='block';tp.style.display='none';return;}
+
+  try{
+    // Línea 1
+    const noradId  = l1.substring(2,7).trim();
+    const epochStr = l1.substring(18,32).trim();
+    const ndot     = l1.substring(33,43).trim();
+    const bstar    = l1.substring(53,61).trim();
+    // Línea 2
+    const incDeg   = parseFloat(l2.substring(8,16));
+    const raanDeg  = parseFloat(l2.substring(17,25));
+    const eccVal   = parseFloat('0.'+l2.substring(26,33).trim());
+    const omegaDeg = parseFloat(l2.substring(34,42));
+    const m0Deg    = parseFloat(l2.substring(43,51));
+    const meanMot  = parseFloat(l2.substring(52,63));
+    const revNum   = l2.substring(63,68).trim();
+
+    const n=meanMot*2*Math.PI/86400;
+    const a_km=Math.pow(MU/(n*n),1/3);
+    const altCalc=Math.round(a_km-RE);
+    const period_min=(2*Math.PI*Math.sqrt(a_km*a_km*a_km/MU)/60).toFixed(2);
+
+    // Aplicar todo
+    alt=Math.min(2000,Math.max(200,altCalc));
+    inc=incDeg; raan=raanDeg; omega=omegaDeg; m0=m0Deg; satEcc=eccVal;
+    tleEpochMs=parseEpochToMs(epochStr);
+
+    document.getElementById('c-alt').value  = alt;
+    document.getElementById('c-inc').value  = inc;
+    document.getElementById('c-raan').value = raan;
+    document.getElementById('c-omega').value= omega;
+    document.getElementById('c-m0').value   = m0;
+
+    st.innerHTML=`✅ TLE aplicado · NORAD ${noradId} · T=${period_min} min · h≈${altCalc} km`;
+    st.className='tle-status tle-ok';st.style.display='block';
+
+    tp.style.display='block';
+    tp.innerHTML=`
+      <div style="font-size:10px;font-weight:600;color:#4a8fd4;margin:8px 0 4px;">✓ Aplicados a la simulación</div>
+      <div class="tle-param-row"><span>NORAD ID</span><span>${noradId}</span></div>
+      <div class="tle-param-row"><span>Altitud media (h)</span><span>${altCalc} km</span></div>
+      <div class="tle-param-row"><span>Inclinación (i)</span><span>${incDeg.toFixed(4)}°</span></div>
+      <div class="tle-param-row"><span>RAAN (Ω)</span><span>${raanDeg.toFixed(4)}°</span></div>
+      <div class="tle-param-row"><span>Excentricidad (e)</span><span>${eccVal.toFixed(7)}</span></div>
+      <div class="tle-param-row"><span>Arg. perigeo (ω)</span><span>${omegaDeg.toFixed(4)}°</span></div>
+      <div class="tle-param-row"><span>Anomalía media (M₀)</span><span>${m0Deg.toFixed(4)}°</span></div>
+      <div class="tle-param-row"><span>Mov. medio (n)</span><span>${meanMot.toFixed(8)} rev/día</span></div>
+      <div class="tle-param-row"><span>Epoch (base p/saltos)</span><span>${new Date(tleEpochMs).toISOString().slice(0,16).replace('T',' ')} UTC</span></div>
+      <div style="font-size:10px;font-weight:600;color:#2a3a50;margin:8px 0 4px;">✗ Ignorados (requieren SGP4)</div>
+      <div class="tle-param-row ignored"><span>ṅ/2 (arrastre)</span><span>${ndot} rev/día²</span></div>
+      <div class="tle-param-row ignored"><span>BSTAR</span><span>${bstar}</span></div>
+      <div class="tle-param-row ignored"><span>Rev. al epoch</span><span>${revNum}</span></div>`;
+
+    simTime=0;trailPoints.length=0;
+    getParams();
+  }catch(e){
+    st.textContent='❌ Error al parsear: '+e.message;
+    st.className='tle-status tle-err';st.style.display='block';tp.style.display='none';
+  }
+}
+
+// ── Epoch real del TLE y saltos en el tiempo ───────────────────────────────
+// Formato TLE: YYDDD.DDDDDDDD (2 digitos de año + dia del año fraccionario).
+// Convencion estandar: YY<57 -> 20YY, YY>=57 -> 19YY.
+function parseEpochToMs(epochStr){
+  const yy=parseInt(epochStr.substring(0,2),10);
+  const year=yy<57?2000+yy:1900+yy;
+  const dayOfYear=parseFloat(epochStr.substring(2));
+  return Date.UTC(year,0,1)+(dayOfYear-1)*86400000;
+}
+
+function currentSimDateMs(){
+  return(tleEpochMs??Date.now())+simTime*1000;
+}
+
+function setJumpStatus(msg){
+  document.getElementById('jump-status').textContent=msg;
+}
+
+function jumpBy(amount,unit){
+  const ms=unit==='days'?amount*86400000:amount*3600000;
+  const base=tleEpochMs!=null?(tleEpochMs+simTime*1000):Date.now();
+  simTime=((base+ms)-(tleEpochMs??Date.now()))/1000;
+  trailPoints.length=0;
+  setJumpStatus(`→ ${new Date(currentSimDateMs()).toLocaleString()}`);
+}
+
+function jumpToNow(){
+  if(tleEpochMs==null){setJumpStatus('Aplicá un TLE primero.');return;}
+  simTime=(Date.now()-tleEpochMs)/1000;
+  trailPoints.length=0;
+  setJumpStatus(`→ ${new Date(currentSimDateMs()).toLocaleString()} (ahora)`);
+}
+
+function jumpToDate(){
+  const input=document.getElementById('jump-date').value;
+  if(!input){setJumpStatus('Elegí una fecha/hora primero.');return;}
+  if(tleEpochMs==null){setJumpStatus('Aplicá un TLE primero.');return;}
+  const targetMs=new Date(input).getTime();
+  simTime=(targetMs-tleEpochMs)/1000;
+  trailPoints.length=0;
+  setJumpStatus(`→ ${new Date(currentSimDateMs()).toLocaleString()}`);
+}
+
+function togglePause(){
+  paused=!paused;
+  const btn=document.getElementById('pause-btn');
+  btn.textContent=paused?'▶ Reanudar':'⏸ Pausar';
+  btn.classList.toggle('paused',paused);
+}
+
+function getParams(){
+  alt  =+document.getElementById('c-alt').value;
+  inc  =+document.getElementById('c-inc').value;
+  raan =+document.getElementById('c-raan').value;
+  omega=+document.getElementById('c-omega').value;
+  m0   =+document.getElementById('c-m0').value;
+  stLat=+document.getElementById('c-lat').value;
+  stLon=+document.getElementById('c-lon').value;
+  elMin=+document.getElementById('c-elmin').value;
+  bps  =+document.getElementById('c-bps').value;
+  dgen =+document.getElementById('c-dgen').value;
+  simSpeed=+document.getElementById('c-speed').value;
+  document.getElementById('v-alt').textContent=alt+' km';
+  document.getElementById('v-inc').textContent=inc.toFixed(1)+'°';
+  document.getElementById('v-raan').textContent=raan.toFixed(1)+'°';
+  document.getElementById('v-omega').textContent=omega.toFixed(1)+'°';
+  document.getElementById('v-m0').textContent=m0.toFixed(1)+'°';
+  document.getElementById('v-lat').textContent=stLat.toFixed(2)+'°';
+  document.getElementById('v-lon').textContent=stLon.toFixed(2)+'°';
+  document.getElementById('v-elmin').textContent=elMin+'°';
+  document.getElementById('v-bps').textContent=bps+' kbps';
+  document.getElementById('v-dgen').textContent=dgen+' KB/h';
+  document.getElementById('v-speed').textContent=simSpeed+'×';
+  stMesh.position.copy(ll2v(stLat,stLon,RE+10));
+  trailPoints.length=0;updateMetrics();
+}
+
+['c-alt','c-inc','c-raan','c-omega','c-m0','c-lat','c-lon','c-elmin','c-bps','c-dgen','c-speed']
+  .forEach(id=>document.getElementById(id).addEventListener('input',getParams));
+
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+canvas.addEventListener('mousedown',e=>{isDragging=true;prevM={x:e.clientX,y:e.clientY};});
+window.addEventListener('mouseup',()=>isDragging=false);
+window.addEventListener('mousemove',e=>{if(!isDragging)return;rotY+=(e.clientX-prevM.x)*.005;rotX+=(e.clientY-prevM.y)*.005;rotX=Math.max(-1.4,Math.min(1.4,rotX));prevM={x:e.clientX,y:e.clientY};});
+canvas.addEventListener('wheel',e=>{camera.position.multiplyScalar(e.deltaY>0?1.1:.9);e.preventDefault();},{passive:false});
+canvas.addEventListener('touchstart',e=>{isDragging=true;prevM={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+canvas.addEventListener('touchend',()=>isDragging=false);
+canvas.addEventListener('touchmove',e=>{if(!isDragging)return;rotY+=(e.touches[0].clientX-prevM.x)*.005;rotX+=(e.touches[0].clientY-prevM.y)*.005;rotX=Math.max(-1.4,Math.min(1.4,rotX));prevM={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+
+function computeEl(sv){
+  const sv2=ll2v(stLat,stLon,RE),rho=sv.clone().sub(sv2),up=sv2.clone().normalize();
+  return RAD*Math.asin(rho.dot(up)/rho.length());
+}
+
+let lastT=null;
+function animate(ts){
+  requestAnimationFrame(animate);resize();
+  if(!lastT)lastT=ts;
+  const dt=Math.min((ts-lastT)/1000,.05)*simSpeed;lastT=ts;
+  if(!paused)simTime+=dt;
+  const sv=satPos(simTime);
+  satMesh.position.copy(sv);
+  trailPoints.push(sv.clone());if(trailPoints.length>500)trailPoints.shift();
+  trailGeo.setFromPoints(trailPoints);
+  const el=computeEl(sv),vis=el>=elMin;
+  satMat.color.setHex(vis?0x4caf80:0x4FC3F7);trailMat.color.setHex(vis?0x4caf80:0x4FC3F7);
+  const sp=ll2v(stLat,stLon,RE+10);
+  vis?linkGeo.setFromPoints([sp,sv]):linkGeo.setFromPoints([]);
+  const ll=satLatLon(sv);
+  document.getElementById('s-el').textContent=el.toFixed(1)+'°';
+  document.getElementById('s-dist').textContent=Math.round(sv.distanceTo(sp))+' km';
+  document.getElementById('s-latlon').textContent=ll.lat.toFixed(2)+'° / '+ll.lon.toFixed(2)+'°';
+  const ve=document.getElementById('s-vis');ve.textContent=vis?'EN CONTACTO':'sin señal';ve.style.color=vis?'#4caf80':'#ef5350';
+  document.getElementById('s-time').textContent=tleEpochMs!=null
+    ?new Date(currentSimDateMs()).toLocaleString()
+    :`+${Math.floor(simTime/3600)}h ${Math.floor(simTime%3600/60)}m`;
+  const d=camera.position.length();
+  camera.position.set(d*Math.cos(rotX)*Math.sin(rotY),d*Math.sin(rotX),d*Math.cos(rotX)*Math.cos(rotY));
+  camera.lookAt(0,0,0);renderer.render(scene,camera);
+}
+
+parseTLE();
+animate(0);
+</script>
+</body>
+</html>

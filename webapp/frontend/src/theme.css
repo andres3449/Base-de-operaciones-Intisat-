@@ -640,3 +640,198 @@ body {
   0% { color: var(--accent-cyan); text-shadow: 0 0 12px rgba(34, 211, 238, 0.6); }
   100% { color: var(--text-primary); text-shadow: none; }
 }
+
+/* ── Sidebar: grouped/framed section (Centro de Operaciones) ───────────── */
+
+.sidebar-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin: 18px 10px 6px;
+}
+
+.sidebar-group-frame {
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 4px;
+  background: rgba(148, 163, 184, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Órbita page: iframe embed ──────────────────────────────────────── */
+
+.page-orbita {
+  display: flex;
+  flex-direction: column;
+}
+
+.orbita-frame-wrap {
+  flex: 1;
+  min-height: 78vh;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+.orbita-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 78vh;
+  border: none;
+  display: block;
+}
+
+/* ── Programación page: weekly calendar ─────────────────────────────── */
+
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.cal-toolbar button {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms var(--ease), color 140ms var(--ease);
+}
+
+.cal-toolbar button:hover {
+  border-color: var(--accent-cyan);
+  color: var(--text-primary);
+}
+
+.cal-range {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-right: auto;
+}
+
+.cal-grid-wrap {
+  background: linear-gradient(180deg, var(--bg-panel), rgba(30, 41, 59, 0.7));
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow-x: auto;
+  padding: 12px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: 56px repeat(7, minmax(120px, 1fr));
+  min-width: 900px;
+  position: relative;
+}
+
+.cal-corner {
+  grid-row: 1;
+  grid-column: 1;
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+  z-index: 2;
+}
+
+.cal-day-head {
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0 10px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+  z-index: 2;
+  border-bottom: 1px solid var(--border-softer);
+}
+
+.cal-day-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.cal-day-num {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cal-day-head.today .cal-day-num {
+  color: var(--accent-cyan);
+}
+
+.cal-hour-label {
+  grid-column: 1;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  text-align: right;
+  padding-right: 8px;
+  transform: translateY(-6px);
+}
+
+.cal-cell {
+  border-top: 1px solid var(--border-softer);
+  border-left: 1px solid var(--border-softer);
+}
+
+.cal-block {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.22), rgba(59, 130, 246, 0.16));
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 10.5px;
+  color: var(--text-primary);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 16px;
+}
+
+.cal-block strong {
+  font-size: 11px;
+}
+
+.cal-block span {
+  color: var(--text-secondary);
+  font-size: 9.5px;
+}
+
+.cal-marker {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent-gold);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: var(--accent-gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-marker.fired {
+  border-color: var(--border-subtle);
+  color: var(--text-dim);
+}
