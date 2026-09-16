@@ -1,7 +1,12 @@
+import { useState } from 'react'
 import { ValueTile } from '../components/ValueTile'
 import { HistoryChart } from '../components/HistoryChart'
+import { TimeRangePicker } from '../components/TimeRangePicker'
+import type { TimeRange } from '../api'
 
 export function Dashboard() {
+  const [range, setRange] = useState<TimeRange>({})
+
   return (
     <div className="page">
       <h2>Dashboard</h2>
@@ -17,8 +22,9 @@ export function Dashboard() {
         <ValueTile label="Attitude Error" channel="sim.adcs_attitude_error" unit="°" decimals={2} />
       </div>
 
-      <HistoryChart title="Battery Voltage" channel="sim.eps_batt_voltage" color="#22D3EE" unit="V" />
-      <HistoryChart title="Battery Current" channel="sim.eps_batt_current" color="#F59E0B" unit="A" />
+      <TimeRangePicker onChange={setRange} />
+      <HistoryChart title="Battery Voltage" channel="sim.eps_batt_voltage" color="#22D3EE" unit="V" range={range} />
+      <HistoryChart title="Battery Current" channel="sim.eps_batt_current" color="#F59E0B" unit="A" range={range} />
     </div>
   )
 }

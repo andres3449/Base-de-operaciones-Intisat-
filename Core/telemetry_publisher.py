@@ -84,9 +84,20 @@ SIM_CHANNEL_NAMES = {
 
 
 class TelemetryPublisher:
-    """Thin ZMQ PUB wrapper — bind once, call publish_sim/publish_real per frame."""
+    """Thin ZMQ PUB wrapper — bind once, call publish_sim/publish_real per frame.
 
-    def __init__(self, endpoint: str = PUB_ENDPOINT):
+    Three message kinds, on three ZMQ topics so a subscriber can pick which
+    ones it cares about (e.g. the backend's messages-table insert only needs
+    MSG, the live log view in the web UI only needs LOG):
+      - TLM — a telemetry frame (decoded channel values), see publish_sim/publish_real.
+      - MSG — one row per received packet, logged whether or not it decoded
+        (see publish_message) — backs the ClickHouse `messages` table.
+      - LOG — free-text status/error lines for the live log view only, never
+        persisted to ClickHouse (see publish_log).
+    """
+
+    def __init__(self, endpoint: str = PUB_ENDPOINT, satellite_id: str = ""):
+        self._satellite_id = satellite_id
         self._ctx = zmq.Context.instance()
         self._sock = self._ctx.socket(zmq.PUB)
         self._sock.setsockopt(zmq.SNDHWM, 10)
@@ -98,7 +109,10 @@ class TelemetryPublisher:
         for idx, name in SIM_CHANNEL_NAMES.items():
             if idx < len(v):
                 channels[f"sim.{name}"] = float(v[idx])
-        self._send("sim", channels)
+        if not channels:
+            return
+        self._send(b"TLM", {"ts": time.time(), "source": "sim",
+                             "satellite_id": self._satellite_id, "channels": channels})
 
     def publish_real(self, tlm: dict):
         channels = {}
@@ -112,18 +126,31 @@ class TelemetryPublisher:
                     for i, item in enumerate(value):
                         if isinstance(item, (int, float)) and not isinstance(item, bool):
                             channels[f"real.{section}.{key}_{i}"] = float(item)
-        self._send("real", channels)
-
-    def _send(self, source: str, channels: dict):
         if not channels:
             return
-        msg = json.dumps({
-            "ts": time.time(),
-            "source": source,
-            "channels": channels,
-        }).encode("utf-8")
+        self._send(b"TLM", {"ts": time.time(), "source": "real",
+                             "satellite_id": self._satellite_id, "channels": channels})
+
+    def publish_message(
+        self, pkt_type: int, pkt_type_name: str = "", source: str = "mcu",
+        decoded: bool = True, error: str = "", size_bytes: int = 0,
+    ):
+        """One row per received packet — backs the ClickHouse `messages` log,
+        independent of whether TelemetryAssembler could decode it."""
+        self._send(b"MSG", {
+            "ts": time.time(), "satellite_id": self._satellite_id, "source": source,
+            "pkt_type": pkt_type, "pkt_type_name": pkt_type_name,
+            "decoded": decoded, "error": error, "size_bytes": size_bytes,
+        })
+
+    def publish_log(self, text: str):
+        """Free-text line for the live log view — never written to ClickHouse."""
+        self._send(b"LOG", {"ts": time.time(), "text": text})
+
+    def _send(self, topic: bytes, payload: dict):
+        msg = json.dumps(payload).encode("utf-8")
         try:
-            self._sock.send_multipart([b"TLM", msg], flags=zmq.NOBLOCK)
+            self._sock.send_multipart([topic, msg], flags=zmq.NOBLOCK)
         except zmq.ZMQError:
             pass  # no subscriber / socket full — never block the GUI thread
 

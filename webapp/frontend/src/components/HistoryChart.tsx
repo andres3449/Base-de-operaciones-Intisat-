@@ -8,13 +8,14 @@ import {
   YAxis,
 } from 'recharts'
 import { useHistory } from '../telemetry/useHistory'
+import type { TimeRange } from '../api'
 
 interface Props {
   title: string
   channel: string
   color?: string
   unit?: string
-  minutes?: number
+  range?: TimeRange | number
 }
 
 function ChartTooltip({
@@ -40,8 +41,8 @@ function ChartTooltip({
   )
 }
 
-export function HistoryChart({ title, channel, color = '#22D3EE', unit = '', minutes = 30 }: Props) {
-  const points = useHistory(channel, minutes)
+export function HistoryChart({ title, channel, color = '#22D3EE', unit = '', range = 30 }: Props) {
+  const points = useHistory(channel, range)
   const data = points.map((p) => ({ t: p.ts * 1000, v: p.value }))
   const gradId = `grad-${channel.replace(/[^a-zA-Z0-9]/g, '')}`
 

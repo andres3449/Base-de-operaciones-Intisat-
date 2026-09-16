@@ -1,7 +1,12 @@
+import { useState } from 'react'
 import { ValueTile } from '../components/ValueTile'
 import { HistoryChart } from '../components/HistoryChart'
+import { TimeRangePicker } from '../components/TimeRangePicker'
+import type { TimeRange } from '../api'
 
 export function Comms() {
+  const [range, setRange] = useState<TimeRange>({})
+
   return (
     <div className="page">
       <h2>Comunicaciones</h2>
@@ -31,8 +36,9 @@ export function Comms() {
         </div>
       </div>
 
-      <HistoryChart title="RSSI" channel="sim.coms_rssi" color="#22D3EE" unit="dBm" />
-      <HistoryChart title="SNR" channel="sim.coms_snr" color="#F59E0B" unit="dB" />
+      <TimeRangePicker onChange={setRange} />
+      <HistoryChart title="RSSI" channel="sim.coms_rssi" color="#22D3EE" unit="dBm" range={range} />
+      <HistoryChart title="SNR" channel="sim.coms_snr" color="#F59E0B" unit="dB" range={range} />
     </div>
   )
 }

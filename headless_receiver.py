@@ -65,6 +65,21 @@ DEFAULT_CONFIG = {
     "schedule": {"recurring": [], "once": []},
 }
 
+DEFAULT_SATELLITE_CONFIG_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "satellite_config.yaml"
+)
+
+# Nombres legibles para la tabla de mensajes -- ver Core/SDR/telemetry_assembler.py
+# y Core/SDR/image_assembler.py / burst_image_assembler.py para el significado de cada uno.
+PKT_TYPE_NAMES = {
+    0x40: "TELEM_OBC", 0x41: "TELEM_EPS_PWR", 0x42: "TELEM_EPS_SOL",
+    0x43: "TELEM_ADCS_SENS", 0x44: "TELEM_ADCS_CTRL", 0x45: "TELEM_THERMAL",
+    0x46: "TELEM_COMMS",
+    0x10: "IMG_SIZE", 0x11: "IMG_DATA",
+    0x71: "BURST_START", 0x73: "BURST_DATA", 0x74: "BURST_END",
+    0xA0: "OBC_FULL_TLM", 0xA1: "OBC_BEACON",
+}
+
 
 def load_config(path: str) -> dict:
     cfg = dict(DEFAULT_CONFIG)
@@ -77,6 +92,18 @@ def load_config(path: str) -> dict:
     return cfg
 
 
+def load_satellite_id(path: str = DEFAULT_SATELLITE_CONFIG_PATH) -> str:
+    """Lee solo el ID del satelite de satellite_config.yaml. Se lee una vez
+    al arrancar -- cambiarlo requiere reiniciar el proceso (igual que el
+    driver/metodo de recepcion, ver plan de la Etapa 2)."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        return data.get("satellite", {}).get("id", "")
+    except FileNotFoundError:
+        return ""
+
+
 class ScheduleRunner:
     """Relee la sección `schedule:` de un YAML compartido con el backend web
     y dispara comandos (via McuCommandDispatcher) en ventanas recurrentes o
@@ -84,9 +111,10 @@ class ScheduleRunner:
     se disparó se persiste ahí mismo, así sobrevive un reinicio del proceso.
     """
 
-    def __init__(self, config_path: str, dispatcher: McuCommandDispatcher):
+    def __init__(self, config_path: str, dispatcher: McuCommandDispatcher, log=print):
         self._config_path = config_path
         self._dispatcher = dispatcher
+        self._log = log
         self._mtime = None
         self._schedule = {"recurring": [], "once": []}
 
@@ -147,7 +175,7 @@ class ScheduleRunner:
 
     def _fire(self, entry: dict):
         cmd = entry.get("command", "")
-        print(f"[schedule] Disparando: {cmd}  (id={entry.get('id', '?')})")
+        self._log(f"[schedule] Disparando: {cmd}  (id={entry.get('id', '?')})")
         self._dispatcher.dispatch_text(cmd)
 
     def _reload_if_changed(self):
@@ -174,13 +202,13 @@ class ScheduleRunner:
         self._mtime = os.path.getmtime(self._config_path)
 
 
-def _save_image(images_dir: str, data: bytes):
+def _save_image(images_dir: str, data: bytes, log=print):
     os.makedirs(images_dir, exist_ok=True)
     ts = time.strftime("%Y%m%d_%H%M%S")
     path = os.path.join(images_dir, f"payload_{ts}.jpg")
     with open(path, "wb") as f:
         f.write(data)
-    print(f"[headless] Imagen guardada: {path} ({len(data)} bytes)")
+    log(f"[headless] Imagen guardada: {path} ({len(data)} bytes)")
 
 
 def main():
@@ -195,8 +223,10 @@ def main():
     baud = args.baud or cfg["baudrate"]
     reconnect_s = cfg["reconnect_interval_s"]
     images_dir = cfg["images_dir"]
+    satellite_id = load_satellite_id()
 
     print(f"[headless] Puertos disponibles: {UartReceiver.available_ports() or '(ninguno detectado)'}")
+    print(f"[headless] Satelite: {satellite_id or '(sin configurar)'}")
 
     app = QCoreApplication(sys.argv)
 
@@ -205,27 +235,42 @@ def main():
     burst_assembler = BurstImageAssembler()
 
     try:
-        publisher = TelemetryPublisher()
+        publisher = TelemetryPublisher(satellite_id=satellite_id)
     except Exception as e:
         print(f"[headless] ERROR: no se pudo abrir el puente ZMQ: {e}")
         sys.exit(1)
+
+    def _log(msg: str):
+        print(msg)
+        publisher.publish_log(msg)
 
     uart = UartReceiver()
 
     dispatcher = McuCommandDispatcher(
         send_byte=uart.send_command,
         send_payload=uart.send_command_with_payload,
-        log=print,
+        log=_log,
     )
 
     def on_packet(pkt_type: int, data: bytes):
+        name = PKT_TYPE_NAMES.get(pkt_type, f"0x{pkt_type:02X}")
+        decoded = True
+        error = ""
         if 0x40 <= pkt_type <= 0x46:
             telem_assembler.process_packet(pkt_type, data)
         elif pkt_type in (0x10, 0x11):
             image_assembler.process_packet(pkt_type, data)
         elif pkt_type in (0x71, 0x73, 0x74):
             burst_assembler.process_packet(pkt_type, data)
-        # 0xA0/0xA1 (OBC real): no manejado todavia -- ver docstring del modulo.
+        else:
+            # 0xA0/0xA1 (OBC real) y cualquier otro: no manejado todavia
+            # -- ver docstring del modulo. Se loguea igual, sin decodificar.
+            decoded = False
+            error = "pkt_type sin manejar"
+        publisher.publish_message(
+            pkt_type=pkt_type, pkt_type_name=name, source="mcu",
+            decoded=decoded, error=error, size_bytes=len(data),
+        )
 
     def on_burst_command_requested(pkt_type: int, payload: bytes):
         # Mismo criterio que main_window.py::_on_burst_command_requested
@@ -236,21 +281,21 @@ def main():
             uart.send_command(pkt_type)
 
     uart.packet_received.connect(on_packet)
-    uart.connected.connect(lambda p: print(f"[headless] Conectado a {p} @ {baud} baud"))
-    uart.disconnected.connect(lambda: print("[headless] Puerto desconectado"))
-    uart.status_message.connect(lambda msg: print(f"[MCU] {msg}"))
-    uart.log_message.connect(print)
+    uart.connected.connect(lambda p: _log(f"[headless] Conectado a {p} @ {baud} baud"))
+    uart.disconnected.connect(lambda: _log("[headless] Puerto desconectado"))
+    uart.status_message.connect(lambda msg: _log(f"[MCU] {msg}"))
+    uart.log_message.connect(_log)
 
     telem_assembler.telemetry_ready.connect(lambda v: publisher.publish_sim(v))
 
-    image_assembler.image_ready.connect(lambda data: _save_image(images_dir, data))
-    image_assembler.image_error.connect(lambda msg: print(f"[headless] Error de imagen: {msg}"))
+    image_assembler.image_ready.connect(lambda data: _save_image(images_dir, data, _log))
+    image_assembler.image_error.connect(lambda msg: _log(f"[headless] Error de imagen: {msg}"))
     # ack_requested: el MCU maneja ACK/NACK internamente por UART, sin acción del PC
     # (mismo comportamiento que main_window.py::_send_rf_ack en modo MCU).
 
-    burst_assembler.image_ready.connect(lambda data: _save_image(images_dir, data))
-    burst_assembler.image_error.connect(lambda msg: print(f"[headless] Error de imagen (burst): {msg}"))
-    burst_assembler.log_message.connect(print)
+    burst_assembler.image_ready.connect(lambda data: _save_image(images_dir, data, _log))
+    burst_assembler.image_error.connect(lambda msg: _log(f"[headless] Error de imagen (burst): {msg}"))
+    burst_assembler.log_message.connect(_log)
     burst_assembler.command_requested.connect(on_burst_command_requested)
 
     # Reconexión automática: revisa cada N segundos y reintenta si hace falta.
@@ -262,7 +307,7 @@ def main():
 
     # Scheduler: relee headless_receiver.yaml cada 2s y dispara comandos
     # programados desde la pagina de configuracion de la web.
-    schedule_runner = ScheduleRunner(args.config, dispatcher)
+    schedule_runner = ScheduleRunner(args.config, dispatcher, log=_log)
     schedule_timer = QTimer()
     schedule_timer.setInterval(2000)
     schedule_timer.timeout.connect(schedule_runner.tick)

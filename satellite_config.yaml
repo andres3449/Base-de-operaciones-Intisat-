@@ -1,0 +1,10 @@
+satellite:
+  id: INTISAT-1
+  name: INTISAT
+reception:
+  driver: mcu
+  method: uart8a
+  modulation: GFSK
+  frequency_mhz: 437.5
+  gain_db: 40.0
+  sync_word: D391D391

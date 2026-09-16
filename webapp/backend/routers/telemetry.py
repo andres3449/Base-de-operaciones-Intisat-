@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 
@@ -22,19 +23,31 @@ def list_channels():
 
 
 @router.get("/telemetry/latest")
-def latest():
-    return {"values": clickhouse_client.query_latest(clickhouse_client.get_client())}
+def latest(satellite_id: Optional[str] = None):
+    return {"values": clickhouse_client.query_latest(clickhouse_client.get_client(), satellite_id)}
 
 
 @router.get("/telemetry/history")
-def history(channel: str, minutes: int = 30):
-    if minutes <= 0 or minutes > 60 * 24 * 30:
-        raise HTTPException(400, "minutes must be between 1 and 43200")
-    end = time.time()
-    start = end - minutes * 60
+def history(
+    channel: str,
+    minutes: int = 30,
+    from_ts: Optional[float] = None,
+    to_ts: Optional[float] = None,
+    satellite_id: Optional[str] = None,
+):
+    """Time window: either an explicit from_ts/to_ts pair (Grafana-style
+    range picker), or the legacy `minutes`-from-now default when neither
+    is given."""
+    if from_ts is not None and to_ts is not None:
+        start, end = from_ts, to_ts
+    else:
+        if minutes <= 0 or minutes > 60 * 24 * 30:
+            raise HTTPException(400, "minutes must be between 1 and 43200")
+        end = time.time()
+        start = end - minutes * 60
     return {
         "channel": channel,
         "points": clickhouse_client.query_history(
-            clickhouse_client.get_client(), channel, start, end
+            clickhouse_client.get_client(), channel, start, end, satellite_id
         ),
     }

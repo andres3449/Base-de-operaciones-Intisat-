@@ -1,7 +1,12 @@
+import { useState } from 'react'
 import { ValueTile } from '../components/ValueTile'
 import { HistoryChart } from '../components/HistoryChart'
+import { TimeRangePicker } from '../components/TimeRangePicker'
+import type { TimeRange } from '../api'
 
 export function EpsThermal() {
+  const [range, setRange] = useState<TimeRange>({})
+
   return (
     <div className="page">
       <h2>EPS / Thermal</h2>
@@ -49,8 +54,9 @@ export function EpsThermal() {
         </div>
       </div>
 
-      <HistoryChart title="Battery Voltage / Current" channel="sim.eps_batt_voltage" color="#22D3EE" unit="V" />
-      <HistoryChart title="Panel Temp 1" channel="sim.tcs_panel_temp_1" color="#EF4444" unit="°C" />
+      <TimeRangePicker onChange={setRange} />
+      <HistoryChart title="Battery Voltage / Current" channel="sim.eps_batt_voltage" color="#22D3EE" unit="V" range={range} />
+      <HistoryChart title="Panel Temp 1" channel="sim.tcs_panel_temp_1" color="#EF4444" unit="°C" range={range} />
     </div>
   )
 }

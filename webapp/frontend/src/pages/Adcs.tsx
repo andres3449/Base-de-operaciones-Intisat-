@@ -1,7 +1,12 @@
+import { useState } from 'react'
 import { ValueTile } from '../components/ValueTile'
 import { HistoryChart } from '../components/HistoryChart'
+import { TimeRangePicker } from '../components/TimeRangePicker'
+import type { TimeRange } from '../api'
 
 export function Adcs() {
+  const [range, setRange] = useState<TimeRange>({})
+
   return (
     <div className="page">
       <h2>ADCS</h2>
@@ -41,7 +46,8 @@ export function Adcs() {
         </div>
       </div>
 
-      <HistoryChart title="Attitude Error" channel="sim.adcs_attitude_error" color="#A78BFA" unit="°" />
+      <TimeRangePicker onChange={setRange} />
+      <HistoryChart title="Attitude Error" channel="sim.adcs_attitude_error" color="#A78BFA" unit="°" range={range} />
     </div>
   )
 }

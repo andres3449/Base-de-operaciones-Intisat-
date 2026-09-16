@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar'
 import { SplashScreen } from './components/SplashScreen'
+import { RequireAuth } from './components/RequireAuth'
+import { AuthProvider } from './auth/AuthContext'
 import { TelemetryProvider, useTelemetry } from './telemetry/TelemetryContext'
 import { Dashboard } from './pages/Dashboard'
 import { EpsThermal } from './pages/EpsThermal'
@@ -11,6 +13,8 @@ import { Payload } from './pages/Payload'
 import { Config } from './pages/Config'
 import { Programacion } from './pages/Programacion'
 import { Orbita } from './pages/Orbita'
+import { Logs } from './pages/Logs'
+import { Login } from './pages/Login'
 
 const MIN_SPLASH_MS = 900
 
@@ -25,8 +29,24 @@ function AnimatedRoutes() {
         <Route path="/comms" element={<Comms />} />
         <Route path="/payload" element={<Payload />} />
         <Route path="/orbita" element={<Orbita />} />
-        <Route path="/config" element={<Config />} />
-        <Route path="/programacion" element={<Programacion />} />
+        <Route path="/logs" element={<Logs />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/config"
+          element={
+            <RequireAuth>
+              <Config />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/programacion"
+          element={
+            <RequireAuth>
+              <Programacion />
+            </RequireAuth>
+          }
+        />
       </Routes>
     </div>
   )
@@ -61,10 +81,12 @@ function Shell() {
 
 export default function App() {
   return (
-    <TelemetryProvider>
-      <HashRouter>
-        <Shell />
-      </HashRouter>
-    </TelemetryProvider>
+    <AuthProvider>
+      <TelemetryProvider>
+        <HashRouter>
+          <Shell />
+        </HashRouter>
+      </TelemetryProvider>
+    </AuthProvider>
   )
 }

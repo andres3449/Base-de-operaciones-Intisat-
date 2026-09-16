@@ -15,6 +15,7 @@ const MAIN_LINKS = [
   { to: '/comms', label: 'Comms', icon: icon('M4 12a8 8 0 0 1 16 0M7 12a5 5 0 0 1 10 0M12 12v9M12 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z') },
   { to: '/payload', label: 'Payload', icon: icon('M4 8h3l2-2h6l2 2h3v11H4V8Zm8 8a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z') },
   { to: '/orbita', label: 'Órbita', icon: icon('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 0c2.5 2.5 3.8 5.6 3.8 9s-1.3 6.5-3.8 9m0-18c-2.5 2.5-3.8 5.6-3.8 9s1.3 6.5 3.8 9M3.5 9h17M3.5 15h17') },
+  { to: '/logs', label: 'Logs', icon: icon('M4 4h16v4H4V4Zm0 6h16v10H4V10Zm3 3h6M7 16h10') },
 ]
 
 const OPS_LINKS = [

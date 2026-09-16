@@ -835,3 +835,274 @@ body {
   border-color: var(--border-subtle);
   color: var(--text-dim);
 }
+
+/* ── Time range picker (Grafana-style) ──────────────────────────────── */
+
+.time-range-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.time-range-picker button {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms var(--ease), color 140ms var(--ease), background-color 140ms var(--ease);
+}
+
+.time-range-picker button:hover {
+  border-color: var(--accent-cyan);
+  color: var(--text-primary);
+}
+
+.time-range-picker button.active {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(59, 130, 246, 0.1));
+  border-color: var(--accent-cyan);
+  color: var(--text-primary);
+}
+
+.time-range-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-range-custom input {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.time-range-custom span {
+  color: var(--text-dim);
+}
+
+.time-range-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
+/* ── Warning banner (RTL-SDR TX advisory) ───────────────────────────── */
+
+.warning-banner {
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  color: var(--yellow-standby);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* ── Config page: decoder file panel ────────────────────────────────── */
+
+.decoder-file-view {
+  max-height: 420px;
+  overflow: auto;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+/* ── Login page ──────────────────────────────────────────────────────── */
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-panel {
+  width: 100%;
+  max-width: 380px;
+}
+
+/* ── Generic filter row (Logs page tables) ──────────────────────────── */
+
+.filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filter-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.filter-row input,
+.filter-row select {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-family: inherit;
+  min-width: 120px;
+}
+
+.filter-row input:focus,
+.filter-row select:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+}
+
+.filter-row button {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  color: #04121c;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  height: 36px;
+}
+
+.filter-row button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Generic data table (Logs page) ─────────────────────────────────── */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.table-wrap th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+
+.table-wrap td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-softer);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.table-wrap tr:last-child td {
+  border-bottom: none;
+}
+
+.ok-text { color: var(--green-on); }
+.bad-text { color: var(--red-off); }
+
+/* ── Logs page: live panel + last image ─────────────────────────────── */
+
+.logs-top-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .logs-top-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.logs-live-panel {
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logs-live-list {
+  overflow-y: auto;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.logs-live-row {
+  display: flex;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: "Cascadia Code", "Consolas", monospace;
+}
+
+.logs-live-row-msg {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.logs-live-ts {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.logs-live-text {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.logs-image-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.logs-image-link {
+  display: block;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  text-decoration: none;
+}
+
+.logs-image-link img {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  background: var(--bg-deep);
+  display: block;
+}

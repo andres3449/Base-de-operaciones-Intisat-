@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, type OnceSchedule, type RecurringSchedule } from '../api'
+import { TransmitWarning, useSatelliteDriver } from '../components/TransmitWarning'
 
 const HOUR_HEIGHT = 44
 const DAY_MS = 86400000
@@ -36,6 +37,7 @@ export function Programacion() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
   const [recurring, setRecurring] = useState<RecurringSchedule[]>([])
   const [once, setOnce] = useState<OnceSchedule[]>([])
+  const driver = useSatelliteDriver()
 
   useEffect(() => {
     const refresh = () => api.schedule().then((s) => {
@@ -94,6 +96,8 @@ export function Programacion() {
   return (
     <div className="page">
       <h2>Programación</h2>
+
+      <TransmitWarning schedule={{ recurring, once }} driver={driver} />
 
       <div className="cal-toolbar">
         <button type="button" onClick={() => setWeekStart(new Date(weekStart.getTime() - 7 * DAY_MS))}>

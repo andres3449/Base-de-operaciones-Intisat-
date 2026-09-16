@@ -19,7 +19,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from . import clickhouse_client, config, zmq_ingest
-from .routers import images, schedule, status, telemetry
+from .routers import auth, images, messages, satellite, schedule, status, telemetry
 from .ws_manager import manager
 
 
@@ -36,6 +36,9 @@ app.include_router(telemetry.router)
 app.include_router(status.router)
 app.include_router(schedule.router)
 app.include_router(images.router)
+app.include_router(auth.router)
+app.include_router(satellite.router)
+app.include_router(messages.router)
 
 
 @app.websocket("/ws/live")

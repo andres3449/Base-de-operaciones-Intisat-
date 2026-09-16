@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from .. import headless_config
+from ..auth import require_auth
 from Core.mcu_commands import COMMAND_REFERENCE
 
-router = APIRouter(prefix="/api", tags=["schedule"])
+router = APIRouter(prefix="/api", tags=["schedule"], dependencies=[Depends(require_auth)])
 
 
 class RecurringIn(BaseModel):

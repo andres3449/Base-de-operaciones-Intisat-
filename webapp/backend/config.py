@@ -46,3 +46,14 @@ _headless_path = _get("HEADLESS_CONFIG_PATH", "headless", "config_path")
 HEADLESS_CONFIG_PATH = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), _headless_path)
 )
+
+# satellite_config.yaml — repo root, shared with headless_receiver.py.
+SATELLITE_CONFIG_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "satellite_config.yaml")
+)
+
+# Admin login for Configuración/Programación — no default committed here
+# beyond an obviously-fake placeholder; set the real values via .env
+# (same pattern as INTISAT_CH_PASSWORD).
+ADMIN_USERNAME = os.environ.get("INTISAT_ADMIN_USER", "admin")
+ADMIN_PASSWORD = os.environ.get("INTISAT_ADMIN_PASSWORD", "changeme")

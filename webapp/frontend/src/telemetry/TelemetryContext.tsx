@@ -1,22 +1,45 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { api, wsURL, type StatusResponse } from '../api'
+import { api, wsURL, type MessageEntry, type StatusResponse } from '../api'
 
 export interface ChannelReading {
   value: number
   ts: number
 }
 
-interface Frame {
+export interface LogEntry {
+  ts: number
+  text: string
+}
+
+interface TelemetryFrame {
+  kind: 'telemetry'
   ts: number
   source: string
+  satellite_id?: string
   channels: Record<string, number>
 }
+
+interface MessageFrame extends MessageEntry {
+  kind: 'message'
+}
+
+interface LogFrame {
+  kind: 'log'
+  ts: number
+  text: string
+}
+
+type WsFrame = TelemetryFrame | MessageFrame | LogFrame
+
+const BUFFER_LIMIT = 300
 
 interface TelemetryState {
   live: Record<string, ChannelReading>
   wsConnected: boolean
   status: StatusResponse | null
   ready: boolean
+  logs: LogEntry[]
+  messages: MessageEntry[]
 }
 
 const TelemetryCtx = createContext<TelemetryState>({
@@ -24,6 +47,8 @@ const TelemetryCtx = createContext<TelemetryState>({
   wsConnected: false,
   status: null,
   ready: false,
+  logs: [],
+  messages: [],
 })
 
 export function useTelemetry() {
@@ -41,6 +66,8 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
   const [wsConnected, setWsConnected] = useState(false)
   const [status, setStatus] = useState<StatusResponse | null>(null)
   const [ready, setReady] = useState(false)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [messages, setMessages] = useState<MessageEntry[]>([])
   const liveRef = useRef(live)
   liveRef.current = live
 
@@ -67,7 +94,10 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id)
   }, [])
 
-  // Persistent WebSocket with auto-reconnect.
+  // Persistent WebSocket with auto-reconnect. Every event is tagged with a
+  // `kind` discriminator by the backend (webapp/backend/zmq_ingest.py) so a
+  // single socket can feed telemetry tiles/charts, the live log panel and
+  // the messages table without opening separate connections.
   useEffect(() => {
     let cancelled = false
     let ws: WebSocket | null = null
@@ -84,14 +114,21 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       ws.onerror = () => ws?.close()
       ws.onmessage = (ev) => {
         try {
-          const frame: Frame = JSON.parse(ev.data)
-          setLive((prev) => {
-            const next = { ...prev }
-            for (const [ch, val] of Object.entries(frame.channels)) {
-              next[ch] = { value: val, ts: frame.ts }
-            }
-            return next
-          })
+          const frame: WsFrame = JSON.parse(ev.data)
+          if (frame.kind === 'telemetry') {
+            setLive((prev) => {
+              const next = { ...prev }
+              for (const [ch, val] of Object.entries(frame.channels)) {
+                next[ch] = { value: val, ts: frame.ts }
+              }
+              return next
+            })
+          } else if (frame.kind === 'message') {
+            const { kind: _kind, ...entry } = frame
+            setMessages((prev) => [entry, ...prev].slice(0, BUFFER_LIMIT))
+          } else if (frame.kind === 'log') {
+            setLogs((prev) => [{ ts: frame.ts, text: frame.text }, ...prev].slice(0, BUFFER_LIMIT))
+          }
         } catch {
           // ignore malformed frame
         }
@@ -107,7 +144,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <TelemetryCtx.Provider value={{ live, wsConnected, status, ready }}>
+    <TelemetryCtx.Provider value={{ live, wsConnected, status, ready, logs, messages }}>
       {children}
     </TelemetryCtx.Provider>
   )
