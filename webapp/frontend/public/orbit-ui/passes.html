@@ -1,0 +1,311 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTISAT — Pass Prediction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="/orbit-ui/orbit.css">
+<script src="/orbit-ui/orbit-core.js"></script>
+<style>:root{--left-w:220px;--right-w:300px}</style>
+</head><body class="space space-full ui-away">
+<div class="shell">
+  <header id="hdr"></header>
+  <div class="grid-layout">
+    <aside class="left-col">
+      <div class="panel grow">
+        <div class="panel-header">Catalog <small id="cat-count"></small></div>
+        <div class="panel-body">
+          <div class="field"><input id="search" placeholder="Find satellite or station…" aria-label="Search catalog"></div>
+          <div class="group-label">Satellites</div>
+          <div class="obj-list" id="sat-list"></div>
+          <button class="btn block" id="toggle-sat-form" style="margin-top:6px">+ ADD SATELLITE</button>
+          <div id="sat-form" hidden style="margin-top:6px">
+            <div class="field-row2">
+              <label class="field">Name<input id="sf-name" placeholder="e.g. ISS"></label>
+              <label class="field">Color<input id="sf-color" type="color" value="#f59e0b" style="height:24px;padding:1px"></label>
+            </div>
+            <label class="field">TLE (two lines)<textarea class="tle" id="sf-tle" wrap="off" spellcheck="false"></textarea></label>
+            <button class="btn primary block" id="sf-add">ADD TO CATALOG</button>
+            <div class="status-msg" id="sf-status"></div>
+          </div>
+          <div class="group-label" style="margin-top:12px">Ground stations</div>
+          <div class="obj-list" id="st-list"></div>
+          <button class="btn block" id="toggle-st-form" style="margin-top:6px">+ ADD STATION</button>
+          <div id="st-form" hidden style="margin-top:6px">
+            <label class="field">Name<input id="gf-name"></label>
+            <div class="field-row2">
+              <label class="field">Latitude °<input id="gf-lat" type="number" step="any"></label>
+              <label class="field">Longitude °<input id="gf-lon" type="number" step="any"></label>
+            </div>
+            <div class="field-row2">
+              <label class="field">Altitude m<input id="gf-alt" type="number" step="any" value="0"></label>
+              <label class="field">Mask °<input id="gf-mask" type="number" step="any" value="5"></label>
+            </div>
+            <button class="btn primary block" id="gf-save">ADD STATION</button>
+            <div class="status-msg" id="gf-status"></div>
+          </div>
+          <p class="note">Catalog is stored in this browser only (no server persistence yet).</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Scene time</div>
+        <div class="panel-body" id="time"></div>
+      </div>
+    </aside>
+
+    <main class="center-col">
+      <div class="viewport-wrap">
+        <div class="viewport-card">
+          <div class="viewport-title"><span>Pass geometry · all visible objects</span><small>Kepler + J2 estimate</small></div>
+          <div class="globe" id="globe"></div>
+          <div class="coverage-key"><div><i></i>ORBITS (ALT ×3.6)</div><div><i class="link"></i>STATION ACCESS</div><div><i class="track"></i>SELECTED PASS TRACK</div></div>
+          <div class="hud camera-cross" style="bottom:9px">
+            <span></span><button data-cam="up" title="Tilt up">▲</button><span></span>
+            <button data-cam="left" title="Rotate left">◀</button><button class="core" data-cam="reset" title="Reset view">●</button><button data-cam="right" title="Rotate right">▶</button>
+            <span></span><button data-cam="down" title="Tilt down">▼</button><span></span>
+          </div>
+          <div class="event-log" id="event-log" style="left:9px"></div>
+        </div>
+        <div class="bottom-dock">
+          <button class="dock-btn on" id="btn-grid" title="Lat/lon grid">⌘</button>
+          <button class="dock-btn on" id="btn-labels" title="Labels">☷</button>
+          <span></span>
+          <button class="dock-btn" id="btn-reset" title="Reset view">◎</button>
+          <button class="dock-btn" id="btn-follow" title="Follow selected satellite">◉</button>
+          <span></span>
+          <button class="dock-btn" id="btn-full" title="Fullscreen">⛶</button>
+        </div>
+      </div>
+      <div class="panel timeline-panel">
+        <div class="panel-header">
+          <span>Access timeline · <span id="tl-day" style="text-transform:none"></span> UTC</span>
+          <span style="display:flex;gap:4px"><button class="btn" id="tl-prev">‹ DAY</button><button class="btn" id="tl-today">SCENE DAY</button><button class="btn" id="tl-next">DAY ›</button></span>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+    </main>
+
+    <aside class="right-col">
+      <div class="panel grow" style="min-height:220px">
+        <div class="panel-header">Access windows <small id="pass-count"></small></div>
+        <div class="panel-body" style="padding-bottom:0;flex:none;overflow:visible">
+          <div class="field-row2">
+            <label class="field">Satellite<select id="sel-sat"></select></label>
+            <label class="field">Observer<select id="sel-st"></select></label>
+          </div>
+          <div class="field-row2">
+            <label class="field">Window<select id="sel-win"><option value="1">24 h</option><option value="3">3 days</option><option value="7">7 days</option></select></label>
+            <label class="field">Sampling<select id="sel-step"><option value="30">30 s</option><option value="10">10 s</option></select></label>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:auto;border-top:1px solid #d0dae0">
+          <table class="pass-table"><thead><tr><th>AOS (UTC)</th><th>Dur</th><th>Max el</th><th>Az</th></tr></thead><tbody id="pass-body"></tbody></table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Selected pass <small id="sel-label"></small></div>
+        <div class="panel-body" id="sel-body"><div class="empty">Select a pass in the table or timeline.</div></div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict'
+  const O = Orbit, $ = (id) => document.getElementById(id)
+  O.mountHeader($('hdr'), 'Pass Prediction')
+  const globe = O.createGlobe($('globe'), { distance: 44000, frameDy: 10, handoff: true, frame: document.querySelector('.viewport-card') })
+  globe.focusStation(O.activeStation())
+  O.stage([[() => {}, 3100]], 0)
+
+  let passes = [], selected = null, passKey = '', dayStart = dayOf(O.clock.t), timelineCache = { key: '', rows: [] }
+  function dayOf(ms) { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) }
+
+  function log(text) {
+    const el = $('event-log'), line = document.createElement('div')
+    line.textContent = '[' + O.utcTime(O.clock.t) + '] ' + text
+    el.prepend(line)
+    while (el.children.length > 4) el.lastChild.remove()
+  }
+
+  /* catalog */
+  function renderCatalog() {
+    const q = $('search').value.trim().toLowerCase()
+    const sats = O.satellites().filter((s) => !q || s.name.toLowerCase().includes(q))
+    const sts = O.stations().filter((s) => !q || s.name.toLowerCase().includes(q))
+    const aS = O.activeSat(), aG = O.activeStation()
+    $('cat-count').textContent = O.satellites().length + ' sat · ' + O.stations().length + ' gs'
+    $('sat-list').innerHTML = sats.map((s) => '<div class="obj' + (aS && s.id === aS.id ? ' selected' : '') + '" data-sat="' + s.id + '"><span class="swatch" style="background:' + (s.ok ? s.color : '#dc4747') + '"></span><span><b>' + O.esc(s.name) + '</b><span class="sub">' + (s.ok ? Math.round(s.a - O.RE) + ' km · ' + s.incDeg.toFixed(1) + '° · ' + (O.isHidden(s.id) ? 'hidden' : 'shown') : 'invalid TLE') + '</span></span><span style="display:flex;gap:2px"><button class="x" data-eye="' + s.id + '" title="Show / hide">' + (O.isHidden(s.id) ? '◌' : '◉') + '</button><button class="x" data-rmsat="' + s.id + '" title="Remove">×</button></span></div>').join('') || '<div class="empty">No match</div>'
+    $('st-list').innerHTML = sts.map((s) => '<div class="obj' + (aG && s.id === aG.id ? ' selected' : '') + '" data-st="' + s.id + '"><span class="swatch" style="background:' + (s.color || '#22c55e') + '"></span><span><b>' + O.esc(s.name) + '</b><span class="sub">' + s.lat.toFixed(2) + '°, ' + s.lon.toFixed(2) + '° · mask ' + s.mask + '°</span></span><span style="display:flex;gap:2px"><button class="x" data-edit="' + s.id + '" title="Edit">✎</button><button class="x" data-rmst="' + s.id + '" title="Remove">×</button></span></div>').join('') || '<div class="empty">No match</div>'
+    $('sat-list').querySelectorAll('[data-sat]').forEach((el) => el.onclick = (e) => { if (e.target.closest('button')) return; O.setActiveSat(el.dataset.sat) })
+    $('st-list').querySelectorAll('[data-st]').forEach((el) => el.onclick = (e) => { if (e.target.closest('button')) return; O.setActiveStation(el.dataset.st); globe.focusStation(O.activeStation()) })
+    $('sat-list').querySelectorAll('[data-eye]').forEach((b) => b.onclick = () => O.setHidden(b.dataset.eye, !O.isHidden(b.dataset.eye)))
+    $('sat-list').querySelectorAll('[data-rmsat]').forEach((b) => b.onclick = () => { if (!confirm('Remove this satellite from the catalog?')) return; try { O.removeSatellite(b.dataset.rmsat) } catch (e) { alert(e.message) } })
+    $('st-list').querySelectorAll('[data-rmst]').forEach((b) => b.onclick = () => { if (!confirm('Remove this ground station?')) return; try { O.removeStation(b.dataset.rmst) } catch (e) { alert(e.message) } })
+    $('st-list').querySelectorAll('[data-edit]').forEach((b) => b.onclick = () => editStation(b.dataset.edit))
+    const selOpts = (list, cur) => list.map((x) => '<option value="' + x.id + '"' + (cur && x.id === cur.id ? ' selected' : '') + '>' + O.esc(x.name) + '</option>').join('')
+    $('sel-sat').innerHTML = selOpts(O.validSatellites(), aS)
+    $('sel-st').innerHTML = selOpts(O.stations(), aG)
+  }
+  $('search').oninput = renderCatalog
+  $('sel-sat').onchange = () => O.setActiveSat($('sel-sat').value)
+  $('sel-st').onchange = () => { O.setActiveStation($('sel-st').value); globe.focusStation(O.activeStation()) }
+  $('sel-win').onchange = $('sel-step').onchange = () => { passKey = ''; recompute() }
+
+  $('toggle-sat-form').onclick = () => { $('sat-form').hidden = !$('sat-form').hidden }
+  $('sf-add').onclick = () => {
+    const st = $('sf-status')
+    const lines = $('sf-tle').value.split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim())
+    let name = $('sf-name').value.trim(), l1, l2
+    if (lines.length >= 3) { name = name || lines[0].trim(); l1 = lines[1]; l2 = lines[2] } else { l1 = lines[0]; l2 = lines[1] }
+    try {
+      const { parsed } = O.addSatellite(name, l1, l2, $('sf-color').value)
+      st.className = 'status-msg ' + (parsed.warnings.length ? 'warn' : 'ok')
+      st.textContent = '✓ Added ' + (name || parsed.name) + (parsed.warnings.length ? ' · ' + parsed.warnings.join('; ') : '')
+      $('sf-tle').value = ''; $('sf-name').value = ''
+      log('Satellite added — ' + (name || parsed.name))
+    } catch (e) { st.className = 'status-msg err'; st.textContent = e.message }
+  }
+  let editing = null
+  $('toggle-st-form').onclick = () => { editing = null; $('gf-save').textContent = 'ADD STATION'; $('st-form').hidden = !$('st-form').hidden }
+  function editStation(id) {
+    const s = O.stationById(id)
+    if (!s) return
+    editing = id
+    $('st-form').hidden = false
+    $('gf-name').value = s.name; $('gf-lat').value = s.lat; $('gf-lon').value = s.lon; $('gf-alt').value = s.altM; $('gf-mask').value = s.mask
+    $('gf-save').textContent = 'SAVE STATION'
+  }
+  $('gf-save').onclick = () => {
+    const st = $('gf-status')
+    const v = { name: $('gf-name').value, lat: $('gf-lat').value, lon: $('gf-lon').value, altM: $('gf-alt').value, mask: $('gf-mask').value }
+    if ([v.lat, v.lon, v.altM, v.mask].some((x) => String(x).trim() === '')) { st.className = 'status-msg err'; st.textContent = 'Fill latitude, longitude, altitude and mask.'; return }
+    try {
+      if (editing) O.updateStation(editing, v); else O.addStation(v)
+      st.className = 'status-msg ok'; st.textContent = '✓ ' + (editing ? 'Saved' : 'Added') + ' ' + v.name.trim()
+      editing = null; $('gf-save').textContent = 'ADD STATION'
+    } catch (e) { st.className = 'status-msg err'; st.textContent = e.message }
+  }
+
+  /* access windows */
+  function recompute() {
+    const s = O.activeSat(), st = O.activeStation()
+    if (!s || !st) { passes = []; renderPasses(); return }
+    const days = +$('sel-win').value, step = +$('sel-step').value
+    const start = dayOf(O.clock.t)
+    const key = [s.id, s.tle.join(), st.id, st.lat, st.lon, st.mask, days, step, start].join('|')
+    if (key === passKey) return
+    passKey = key
+    passes = O.predictPasses(s, st, start, start + days * 86400000, step)
+    if (selected && !passes.find((p) => p.aos === selected.aos)) setSelected(null)
+    renderPasses()
+  }
+  function renderPasses() {
+    $('pass-count').textContent = passes.length + ' passes'
+    $('pass-body').innerHTML = passes.map((p, k) => '<tr data-k="' + k + '"' + (selected && selected.aos === p.aos ? ' class="selected"' : '') + '><td>' + O.utcDate(p.aos).slice(5) + ' ' + O.utcHM(p.aos) + (p.partialStart ? '*' : '') + '</td><td>' + O.dur(p.duration) + '</td><td class="el ' + O.elClass(p.maxEl) + '">' + p.maxEl.toFixed(1) + '°</td><td>' + Math.round(p.aosAz) + '→' + Math.round(p.losAz) + '</td></tr>').join('') || '<tr><td colspan="4" class="empty">No passes above the mask in this window.</td></tr>'
+    $('pass-body').querySelectorAll('[data-k]').forEach((tr) => tr.onclick = () => { setSelected(passes[+tr.dataset.k], O.activeSat(), O.activeStation()); O.setTime(selected.tca) })
+  }
+
+  function setSelected(p, s, st) {
+    selected = p ? Object.assign({ satId: s.id, stId: st.id }, p) : null
+    if (!p) { $('sel-body').innerHTML = '<div class="empty">Select a pass in the table or timeline.</div>'; $('sel-label').textContent = ''; globe.setTrack(null); renderPasses(); renderTimeline(true); return }
+    const track = O.passTrack(s, st, p, 80)
+    globe.setTrack(O.groundTrack(s, p.aos, p.los, 80))
+    $('sel-label').textContent = s.name + ' → ' + st.name
+    $('sel-body').innerHTML = '<svg class="sky" id="sky"></svg>' +
+      '<div class="kv"><span>AOS</span><b>' + O.utcStamp(p.aos).slice(5) + ' · ' + Math.round(p.aosAz) + '°</b></div>' +
+      '<div class="kv"><span>TCA</span><b>' + O.utcTime(p.tca) + ' · ' + p.maxEl.toFixed(1) + '°</b></div>' +
+      '<div class="kv"><span>LOS</span><b>' + O.utcTime(p.los) + ' · ' + Math.round(p.losAz) + '°</b></div>' +
+      '<div class="kv"><span>Duration</span><b>' + O.dur(p.duration) + (p.partialStart || p.partialEnd ? ' (window-clipped)' : '') + '</b></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px"><button class="btn" id="go-aos">GO TO AOS</button><button class="btn primary" id="go-tca">GO TO TCA</button></div>'
+    selected.track = track
+    O.skyPlot($('sky'), track, { mask: st.mask })
+    $('go-aos').onclick = () => O.setTime(p.aos)
+    $('go-tca').onclick = () => O.setTime(p.tca)
+    renderPasses()
+    renderTimeline(true)
+  }
+
+  /* timeline: every visible satellite × every station, one UTC day */
+  function renderTimeline(force) {
+    const sats = O.validSatellites().filter((s) => !O.isHidden(s.id)), sts = O.stations()
+    const key = dayStart + '|' + sats.map((s) => s.id + s.tle.join()).join() + '|' + sts.map((s) => s.id + s.lat + s.lon + s.mask).join()
+    if (key !== timelineCache.key) {
+      timelineCache.key = key
+      timelineCache.rows = []
+      for (const s of sats) for (const st of sts) timelineCache.rows.push({ s, st, passes: O.predictPasses(s, st, dayStart, dayStart + 86400000, 30) })
+    } else if (!force) return
+    $('tl-day').textContent = O.utcDate(dayStart)
+    const pct = (ms) => ((ms - dayStart) / 86400000) * 100
+    let html = '<div class="tl-axis">' + [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => '<span style="left:' + (h / 24) * 100 + '%">' + String(h).padStart(2, '0') + ':00</span>').join('') + '</div>'
+    html += timelineCache.rows.map((r, ri) => '<div class="tl-row"><div class="tl-name" title="' + O.esc(r.s.name + ' → ' + r.st.name) + '"><i style="background:' + r.s.color + '"></i>' + O.esc(r.s.name) + ' → ' + O.esc(r.st.name.split('·').pop().trim()) + '</div><div class="tl-track">' +
+      r.passes.map((p, pi) => '<button class="tl-pass' + (selected && selected.aos === p.aos && selected.satId === r.s.id && selected.stId === r.st.id ? ' selected' : '') + '" data-r="' + ri + '" data-p="' + pi + '" title="' + O.utcHM(p.aos) + '–' + O.utcHM(p.los) + ' · max ' + p.maxEl.toFixed(1) + '°" style="left:' + pct(p.aos) + '%;width:' + Math.max(0.25, pct(p.los) - pct(p.aos)) + '%;background:' + (p.maxEl >= 45 ? '#16a34a' : p.maxEl >= 20 ? '#0284c7' : '#d97706') + '"></button>').join('') +
+      '</div></div>').join('') || '<div class="empty">Show at least one satellite in the catalog.</div>'
+    html += '<div class="tl-overlay"><div class="tl-now" id="tl-now"></div></div>'
+    $('timeline').innerHTML = html
+    $('timeline').querySelectorAll('.tl-pass').forEach((b) => b.onclick = () => {
+      const r = timelineCache.rows[+b.dataset.r], p = r.passes[+b.dataset.p]
+      if (r.s.id !== O.activeSat().id) O.setActiveSat(r.s.id)
+      if (r.st.id !== O.activeStation().id) O.setActiveStation(r.st.id)
+      setSelected(p, r.s, r.st)
+      O.setTime(p.tca)
+    })
+  }
+  function placeNow(ms) {
+    const el = $('tl-now')
+    if (!el) return
+    const f = (ms - dayStart) / 86400000
+    el.style.display = f >= 0 && f <= 1 ? 'block' : 'none'
+    el.style.left = f * 100 + '%'
+  }
+  $('tl-prev').onclick = () => { dayStart -= 86400000; renderTimeline() }
+  $('tl-next').onclick = () => { dayStart += 86400000; renderTimeline() }
+  $('tl-today').onclick = () => { dayStart = dayOf(O.clock.t); renderTimeline() }
+
+  /* camera + dock */
+  document.querySelectorAll('[data-cam]').forEach((b) => b.onclick = () => {
+    const c = b.dataset.cam
+    if (c === 'reset') globe.focusStation(O.activeStation())
+    else globe.rotate(c === 'left' ? -0.22 : c === 'right' ? 0.22 : 0, c === 'up' ? -0.14 : c === 'down' ? 0.14 : 0)
+  })
+  let gridOn = true, labelsOn = true
+  $('btn-grid').onclick = () => { gridOn = !gridOn; globe.setGrid(gridOn); $('btn-grid').classList.toggle('on', gridOn) }
+  $('btn-labels').onclick = () => { labelsOn = !labelsOn; globe.setLabels(labelsOn); $('btn-labels').classList.toggle('on', labelsOn) }
+  $('btn-reset').onclick = () => O.stage([[() => { globe.reset(); globe.focusStation(O.activeStation()); $('btn-follow').classList.remove('on') }, 2700]])
+  $('btn-follow').onclick = () => { const id = O.activeSat().id, on = globe.following() !== id; globe.setFollow(on ? id : null); $('btn-follow').classList.toggle('on', on) }
+  $('btn-full').onclick = () => { const sh = document.querySelector('.shell'); document.fullscreenElement ? document.exitFullscreen() : sh.requestFullscreen && sh.requestFullscreen() }
+
+  O.mountTimePanel($('time'), { onJump: (ms) => { dayStart = dayOf(ms); renderTimeline() } })
+  O.onCatalog(() => { renderCatalog(); passKey = ''; recompute(); renderTimeline() })
+  renderCatalog(); recompute(); renderTimeline()
+  log('Access analysis ready')
+
+  let lastSlow = 0, lastDay = dayOf(O.clock.t)
+  const visState = new Map()
+  O.loop((ms) => {
+    const hidden = O.getCatalog().hidden, s = O.activeSat()
+    globe.update(ms, { focus: s && s.id, station: O.activeStation().id, linkStations: O.stations().map((x) => x.id), hidden })
+    const now = performance.now()
+    if (now - lastSlow > 250) {
+      lastSlow = now
+      O.updateHeaderClock(ms)
+      placeNow(ms)
+      const d = dayOf(ms)
+      if (d !== lastDay) { lastDay = d; dayStart = d; recompute(); renderTimeline() }
+      for (const sat of O.validSatellites()) for (const st of O.stations()) {
+        if (hidden.includes(sat.id)) continue
+        const k = sat.id + '|' + st.id, v = O.look(st, O.ecefAt(sat, ms)).el >= st.mask
+        if (visState.has(k) && visState.get(k) !== v) log((v ? 'AOS ' : 'LOS ') + sat.name + ' @ ' + st.name.split('·').pop().trim())
+        visState.set(k, v)
+      }
+      if (selected && O.activeSat() && O.activeStation()) {
+        const sky = $('sky')
+        if (sky && ms >= selected.aos && ms <= selected.los) {
+          const lk = O.look(O.activeStation(), O.ecefAt(O.activeSat(), ms))
+          O.skyPlot(sky, selected.track, { mask: O.activeStation().mask, current: { az: lk.az, el: lk.el } })
+        }
+      }
+    }
+  })
+})()
+</script>
+</body></html>

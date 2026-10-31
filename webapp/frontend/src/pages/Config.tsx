@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type CommandRef, type ScheduleResponse, type SatelliteConfig } from '../api'
+import { api, type CommandRef, type DetectedDevice, type ScheduleResponse, type SatelliteConfig } from '../api'
 import { TransmitWarning } from '../components/TransmitWarning'
 
 type Mode = 'recurring' | 'once'
@@ -10,11 +10,11 @@ function toLocalInputValue(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-const DRIVER_OPTIONS: { value: SatelliteConfig['reception']['driver']; label: string }[] = [
-  { value: 'mcu', label: 'MCU (UART, RX/TX)' },
-  { value: 'limesdr', label: 'LimeSDR (RX/TX)' },
-  { value: 'rtlsdr', label: 'RTL-SDR (solo RX)' },
-]
+const DRIVER_LABEL: Record<string, string> = {
+  mcu: 'MCU (UART, RX/TX)',
+  limesdr: 'LimeSDR (RX/TX)',
+  rtlsdr: 'RTL-SDR (solo RX)',
+}
 
 const METHOD_OPTIONS = [
   { value: 'uart8a', label: 'UART 0x8A' },
@@ -27,6 +27,21 @@ function SatellitePanel({ onDriverChange }: { onDriverChange: (driver: string) =
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [devices, setDevices] = useState<DetectedDevice[]>([])
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState<string | null>(null)
+
+  async function handleScan() {
+    setScanning(true)
+    setScanError(null)
+    try {
+      setDevices(await api.scanDevices())
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setScanning(false)
+    }
+  }
 
   useEffect(() => {
     api
@@ -69,10 +84,9 @@ function SatellitePanel({ onDriverChange }: { onDriverChange: (driver: string) =
   return (
     <div className="panel">
       <div className="panel-title">Satélite y recepción</div>
-      <p className="empty-note" style={{ marginBottom: 16 }}>
-        El receptor sigue escuchando todo lo que llega — esta configuración solo define qué se
-        muestra/etiqueta como el satélite activo. Elegir LimeSDR o RTL-SDR aquí todavía no cambia
-        el hardware usado para recibir (esa integración es una etapa aparte).
+      <p className="empty-note" style={{ marginBottom: 10 }}>
+        El driver que guardes aquí es el que usa <code>headless_receiver.py</code> — necesita
+        reiniciarse para tomar un cambio (no es en caliente).
       </p>
       <form onSubmit={handleSubmit} className="config-form">
         <label>
@@ -93,24 +107,36 @@ function SatellitePanel({ onDriverChange }: { onDriverChange: (driver: string) =
             required
           />
         </label>
-        <label>
-          Driver de recepción
-          <select
-            value={cfg.reception.driver}
-            onChange={(e) =>
-              setCfg({
-                ...cfg,
-                reception: { ...cfg.reception, driver: e.target.value as SatelliteConfig['reception']['driver'] },
-              })
-            }
-          >
-            {DRIVER_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="device-scan">
+          <div className="device-scan-header">
+            <span>
+              Driver actual: <b>{DRIVER_LABEL[cfg.reception.driver] ?? cfg.reception.driver}</b>
+            </span>
+            <button type="button" className="mini-ctrl-btn accent" onClick={handleScan} disabled={scanning}>
+              {scanning ? 'Buscando…' : 'Buscar equipos'}
+            </button>
+          </div>
+          {scanError && <div className="config-error">{scanError}</div>}
+          {devices.length === 0 ? (
+            <p className="empty-note" style={{ fontSize: 10.5 }}>
+              {scanning ? 'Escaneando USB y puertos serie…' : 'Sin escanear todavía. Detecta lo que está realmente conectado (USB para LimeSDR/RTL-SDR, puertos serie para MCU) en vez de elegirlo a ciegas.'}
+            </p>
+          ) : (
+            <div className="device-scan-list">
+              {devices.map((d, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={cfg.reception.driver === d.driver ? 'device-scan-row selected' : 'device-scan-row'}
+                  onClick={() => setCfg({ ...cfg, reception: { ...cfg.reception, driver: d.driver } })}
+                >
+                  <span className="dsr-label">{d.label}</span>
+                  <span className="dsr-detail">{d.detail}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <label>
           Método (protocolo/framing)
           <select
@@ -236,7 +262,7 @@ export function Config() {
     api.commands().then((r) => {
       setCommands(r.commands)
       if (r.commands.length) setCommand(r.commands[0].name)
-    })
+    }).catch(() => {})
     refresh()
     const id = setInterval(refresh, 5000)
     return () => clearInterval(id)
@@ -280,102 +306,108 @@ export function Config() {
   }
 
   return (
-    <div className="page">
+    <div className="page config-page">
       <h2>Configuración</h2>
 
-      <SatellitePanel onDriverChange={setDriver} />
-      <DecoderFilePanel />
+      <div className="two-col-grid" style={{ alignItems: 'start' }}>
+        <div>
+          <SatellitePanel onDriverChange={setDriver} />
+          <DecoderFilePanel />
+        </div>
+        <div>
+          <TransmitWarning schedule={schedule} driver={driver} />
+          <div className="panel">
+            <div className="panel-title">Programar comando</div>
+            <form onSubmit={handleSubmit} className="config-form">
+              <label>
+                Comando
+                <select value={command} onChange={(e) => setCommand(e.target.value)}>
+                  {commands.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {selected && <div className="config-hint">{selected.syntax} — {selected.description}</div>}
 
-      <TransmitWarning schedule={schedule} driver={driver} />
+              <div className="config-mode-toggle">
+                <button type="button" className={mode === 'recurring' ? 'active' : ''} onClick={() => setMode('recurring')}>
+                  Recurrente
+                </button>
+                <button type="button" className={mode === 'once' ? 'active' : ''} onClick={() => setMode('once')}>
+                  Una sola vez
+                </button>
+              </div>
 
-      <div className="panel">
-        <div className="panel-title">Programar comando</div>
-        <form onSubmit={handleSubmit} className="config-form">
-          <label>
-            Comando
-            <select value={command} onChange={(e) => setCommand(e.target.value)}>
-              {commands.map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {selected && <div className="config-hint">{selected.syntax} — {selected.description}</div>}
+              {mode === 'recurring' ? (
+                <>
+                  <label>
+                    Desde
+                    <input type="datetime-local" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} required />
+                  </label>
+                  <label>
+                    Hasta
+                    <input type="datetime-local" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} required />
+                  </label>
+                  <label>
+                    Cada (segundos)
+                    <input type="number" min={1} value={intervalS} onChange={(e) => setIntervalS(Number(e.target.value))} required />
+                  </label>
+                </>
+              ) : (
+                <label>
+                  Cuándo
+                  <input type="datetime-local" value={fireAt} onChange={(e) => setFireAt(e.target.value)} required />
+                </label>
+              )}
 
-          <div className="config-mode-toggle">
-            <button type="button" className={mode === 'recurring' ? 'active' : ''} onClick={() => setMode('recurring')}>
-              Recurrente
-            </button>
-            <button type="button" className={mode === 'once' ? 'active' : ''} onClick={() => setMode('once')}>
-              Una sola vez
-            </button>
+              {error && <div className="config-error">{error}</div>}
+              <button type="submit" disabled={saving}>
+                {saving ? 'Guardando…' : 'Programar'}
+              </button>
+            </form>
           </div>
-
-          {mode === 'recurring' ? (
-            <>
-              <label>
-                Desde
-                <input type="datetime-local" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} required />
-              </label>
-              <label>
-                Hasta
-                <input type="datetime-local" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} required />
-              </label>
-              <label>
-                Cada (segundos)
-                <input type="number" min={1} value={intervalS} onChange={(e) => setIntervalS(Number(e.target.value))} required />
-              </label>
-            </>
-          ) : (
-            <label>
-              Cuándo
-              <input type="datetime-local" value={fireAt} onChange={(e) => setFireAt(e.target.value)} required />
-            </label>
-          )}
-
-          {error && <div className="config-error">{error}</div>}
-          <button type="submit" disabled={saving}>
-            {saving ? 'Guardando…' : 'Programar'}
-          </button>
-        </form>
+        </div>
       </div>
 
-      <div className="panel">
-        <div className="panel-title">Ventanas recurrentes</div>
-        {schedule.recurring.length === 0 && <div className="empty-note">Nada programado.</div>}
-        {schedule.recurring.map((e) => (
-          <div key={e.id} className="schedule-row">
-            <div>
-              <strong>{e.command}</strong>
-              <span className="schedule-meta">
-                {toLocalInputValue(e.window_start)} → {toLocalInputValue(e.window_end)} · cada {e.interval_s}s
-                {e.last_fired_at && ` · último disparo ${toLocalInputValue(e.last_fired_at)}`}
-              </span>
+      <div className="two-col-grid">
+        <div className="panel">
+          <div className="panel-title">Ventanas recurrentes</div>
+          {schedule.recurring.length === 0 && <div className="empty-note">Nada programado.</div>}
+          {schedule.recurring.map((e) => (
+            <div key={e.id} className="schedule-row">
+              <div>
+                <strong>{e.command}</strong>
+                <span className="schedule-meta">
+                  {toLocalInputValue(e.window_start)} → {toLocalInputValue(e.window_end)} · cada {e.interval_s}s
+                  {e.last_fired_at && ` · último disparo ${toLocalInputValue(e.last_fired_at)}`}
+                </span>
+              </div>
+              <button type="button" onClick={() => handleDelete('recurring', e.id)}>
+                Quitar
+              </button>
             </div>
-            <button type="button" onClick={() => handleDelete('recurring', e.id)}>
-              Quitar
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <div className="panel">
-        <div className="panel-title">Una sola vez</div>
-        {schedule.once.length === 0 && <div className="empty-note">Nada programado.</div>}
-        {schedule.once.map((e) => (
-          <div key={e.id} className="schedule-row">
-            <div>
-              <strong>{e.command}</strong>
-              <span className="schedule-meta">
-                {toLocalInputValue(e.fire_at)} {e.fired ? '· ya disparado' : '· pendiente'}
-              </span>
+        <div className="panel">
+          <div className="panel-title">Una sola vez</div>
+          {schedule.once.length === 0 && <div className="empty-note">Nada programado.</div>}
+          {schedule.once.map((e) => (
+            <div key={e.id} className="schedule-row">
+              <div>
+                <strong>{e.command}</strong>
+                <span className="schedule-meta">
+                  {toLocalInputValue(e.fire_at)} {e.fired ? '· ya disparado' : '· pendiente'}
+                </span>
+              </div>
+              <button type="button" onClick={() => handleDelete('once', e.id)}>
+                Quitar
+              </button>
             </div>
-            <button type="button" onClick={() => handleDelete('once', e.id)}>
-              Quitar
-            </button>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )

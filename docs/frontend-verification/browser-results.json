@@ -1,0 +1,425 @@
+{
+  "results": [
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/dashboard/general",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 8,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:12 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nPOWER DISTRI"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/dashboard/eps",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 8,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:13 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nPOWER DISTRI"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/dashboard/adcs",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 7,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:14 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nADCS SENSORS"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/dashboard/comms",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:15 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nLINK METRICS"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/dashboard/payload",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:16 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nORBITAL MICR"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/orbita/general",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:18 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/orbita/passes",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:19 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/orbita/calendar",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:20 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/orbita/free",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:22 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/logs/mensajes",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 3,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nLogs\n2026-10-28 15:40:23 UTC\nSign out\nMessages\nDecoded Variables\nLIVE EVENTS · MSG / LOG\nPause\nClear\nScroll\n\nWaiting for received da"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/logs/variables",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 1,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nLogs\n2026-10-28 15:40:24 UTC\nSign out\nMessages\nDecoded Variables\nDECODED VARIABLES\nChannel\nSelect channel\nsim.eps_batt_voltage\nFrom "
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/configuracion/sdr",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:25 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nSDR & Reception\nSaved profile\nRestart receiver\n"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/configuracion/programacion",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 3,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:26 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nCommand scheduling · UTC\n← Previous\nToday\n2026-"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "route": "#/configuracion/diagnostico",
+      "bodyWidth": 1366,
+      "bodyHeight": 768,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:28 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nDisconnected\nLast frame: —\nSAVED RECEIVER PROFI"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/dashboard/general",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 8,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:29 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nPOWER DISTRI"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/dashboard/eps",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 8,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:30 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nPOWER DISTRI"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/dashboard/adcs",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 7,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:31 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nADCS SENSORS"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/dashboard/comms",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:32 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nLINK METRICS"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/dashboard/payload",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:33 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nORBITAL MICR"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/orbita/general",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:34 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/orbita/passes",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:36 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/orbita/calendar",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:37 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/orbita/free",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:38 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/logs/mensajes",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 3,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nLogs\n2026-10-28 15:40:39 UTC\nSign out\nMessages\nDecoded Variables\nLIVE EVENTS · MSG / LOG\nPause\nClear\nScroll\n\nWaiting for received da"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/logs/variables",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 1,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nLogs\n2026-10-28 15:40:40 UTC\nSign out\nMessages\nDecoded Variables\nDECODED VARIABLES\nChannel\nSelect channel\nsim.eps_batt_voltage\nFrom "
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/configuracion/sdr",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:41 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nSDR & Reception\nSaved profile\nRestart receiver\n"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/configuracion/programacion",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 3,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:42 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nCommand scheduling · UTC\n← Previous\nToday\n2026-"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "route": "#/configuracion/diagnostico",
+      "bodyWidth": 1536,
+      "bodyHeight": 864,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:43 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nDisconnected\nLast frame: —\nSAVED RECEIVER PROFI"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/dashboard/general",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 8,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:45 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nPOWER DISTRI"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/dashboard/eps",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 8,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:46 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nPOWER DISTRI"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/dashboard/adcs",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 7,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:47 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nADCS SENSORS"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/dashboard/comms",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:48 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nLINK METRICS"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/dashboard/payload",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nDashboard\n2026-10-28 15:40:49 UTC\nSign out\nGeneral\nEPS / Thermal\nADCS\nCommunications\nPayload\nDisconnected\nLast frame: —\nORBITAL MICR"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/orbita/general",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:50 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/orbita/passes",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:51 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/orbita/calendar",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:53 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/orbita/free",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 0,
+      "iframe": true,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nOrbit\n2026-10-28 15:40:54 UTC\nSign out\nGeneral\nPasses\nCalendar\nFree View\nORBIT PLANNER · Browser calculations · Default objects are "
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/logs/mensajes",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 3,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nLogs\n2026-10-28 15:40:55 UTC\nSign out\nMessages\nDecoded Variables\nLIVE EVENTS · MSG / LOG\nPause\nClear\nScroll\n\nWaiting for received da"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/logs/variables",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 1,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nLogs\n2026-10-28 15:40:56 UTC\nSign out\nMessages\nDecoded Variables\nDECODED VARIABLES\nChannel\nSelect channel\nsim.eps_batt_voltage\nFrom "
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/configuracion/sdr",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:57 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nSDR & Reception\nSaved profile\nRestart receiver\n"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/configuracion/programacion",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 3,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:58 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nCommand scheduling · UTC\n← Previous\nToday\n2026-"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "route": "#/configuracion/diagnostico",
+      "bodyWidth": 1920,
+      "bodyHeight": 1080,
+      "panels": 4,
+      "iframe": false,
+      "text": "IS\nINTISAT\nMISSION CONTROL\nDashboard\nOrbit\nLogs\nSettings\nDisconnected\nTelemetry bridge unavailable\nReceived frames: 0\nSettings\n2026-10-28 15:40:59 UTC\nSign out\nSDR & Reception\nScheduling\nSDR Diagnostics\nDisconnected\nLast frame: —\nSAVED RECEIVER PROFI"
+    }
+  ],
+  "errors": []
+}

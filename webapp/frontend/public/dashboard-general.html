@@ -1,0 +1,332 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+:root{
+  --bg:#edf5f9; --card:#fff; --line:#dbe7ee; --text:#102944; --muted:#8298b0;
+  --blue:#078fe0; --green:#0abb7a; --purple:#8c2bea; --orange:#ff9400; --dark:#06111f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--text);font-size:12px}
+
+html,body{width:100%;height:100%;overflow:hidden}
+#overview{position:fixed;top:0;left:0;transform-origin:top left;min-width:0;min-height:0;padding:7px 8px 8px;display:grid;grid-template-rows:51px minmax(0,1fr);gap:7px}
+.topbar{background:#fff;border:1px solid var(--line);border-radius:9px;display:flex;align-items:center;padding:0 13px;box-shadow:0 2px 8px #173c530d;min-width:0}
+.topbar h1{font-size:14px;margin:0}.desc{font-size:13px;color:#55748f;border-left:1px solid #bdcbd6;margin-left:10px;padding-left:10px}
+.kpis{margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0}
+.kpi{height:36px;min-width:130px;border:1px solid #e0e9ee;border-radius:7px;background:#fbfdfe;display:flex;align-items:center;padding:4px 8px;gap:7px}
+.kpi small{display:block;color:#8499b1;font-weight:800;font-size:10px}.kpi b{font:700 11px Consolas}.wave{margin-left:auto;font-weight:900;color:#08b878}
+
+.dashboard{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) 177px;gap:7px}
+.topgrid{min-height:0;display:grid;grid-template-columns:1.03fr 1.03fr 1.20fr;grid-template-rows:minmax(0,1fr);gap:7px;overflow:hidden}
+.col{min-width:0;min-height:0;display:grid;gap:7px}
+.col-left{grid-template-rows:minmax(0,1.47fr) minmax(0,.73fr)}
+.col-center{grid-template-rows:minmax(0,1.15fr) minmax(0,.85fr)}
+.col-right{grid-template-rows:minmax(0,1.18fr) minmax(0,.82fr)}
+.card{background:#fff;border:1px solid var(--line);border-radius:7px;box-shadow:0 2px 7px rgba(23,60,83,.075);padding:7px 8px;min-width:0;min-height:0;overflow:hidden}
+.head{height:23px;display:flex;align-items:center;border-bottom:1px solid #edf2f5;margin-bottom:5px;font-size:12.2px;font-weight:600;letter-spacing:.25px;white-space:nowrap}
+.head:before{content:"";width:3px;height:12px;border-radius:2px;background:#658ba9;margin-right:7px;flex:none}
+.eps .head:before,.solar .head:before{background:#c7974f}.payload .head:before{background:#8a74b0}.comms .head:before{background:#4b9d98}
+.right{margin-left:auto}.tag{padding:3px 5px;border:1px solid #d4e8df;background:#eff8f4;color:#35785f;border-radius:4px;font:500 9px Consolas}
+
+.capacity{display:flex;justify-content:space-between;color:#728397;font-size:11.5px}.capacity b{font-family:Consolas;font-weight:500}
+.track{height:4px;background:#e9eef4;border-radius:5px;margin:5px 0 6px;overflow:hidden}.track i{display:block;height:100%;background:linear-gradient(90deg,#5a9dc3,#76b5a6)}
+.power{height:137px;border:1px solid #e4eaf0;background:#fbfcfd;border-radius:6px;display:grid;grid-template-columns:126px minmax(0,1fr);align-items:center;padding:3px 11px;gap:7px}
+.donut{width:126px;height:126px;border-radius:50%;background:var(--line);display:grid;place-items:center}
+.donut:after{content:attr(data-total);white-space:pre;width:69px;height:69px;border-radius:50%;background:#fff;display:grid;place-items:center;text-align:center;font:500 15px/1.2 Consolas;color:#2a4259}
+.legend{display:grid;grid-template-columns:1fr auto;gap:8px 11px;font:10px Consolas}.legend .watts{color:#7d8ca0}
+.legend .b{color:#428cb8}.legend .o{color:#cba25d}.legend .p{color:#8a77b4}.legend .g{color:#53a38f}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px}.metric{height:35px;border:1px solid #e2e8ef;background:#f9fbfd;border-radius:5px;padding:3px 7px;position:relative}.metric small{display:block;color:#74859a;font-size:8.5px}.metric b{font:500 9.5px Consolas;color:#273e54}
+
+.viewer{height:calc(100% - 59px);min-height:158px;border-radius:6px;border:1px solid #24384b;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 113%,#285777 0 22%,#173147 23% 35%,#0d1c2b 36%);cursor:grab;touch-action:none}
+.viewer:active{cursor:grabbing}
+.viewer:before{content:"";position:absolute;inset:0;background-image:radial-gradient(#fff8 1px,transparent 1px);background-size:44px 38px;opacity:.25}
+.earth{position:absolute;left:-10%;right:-10%;bottom:-43%;height:70%;border-radius:50% 50% 0 0;background:linear-gradient(#176da0,#0a3e70);border-top:3px solid #43afe1}
+.cube{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:51px;height:78px;background:#36434f;border:3px solid #f49b19;box-shadow:inset 0 0 0 5px #687680;transition:transform .15s}
+.cube:before,.cube:after{content:"";position:absolute;top:25px;width:92px;height:43px;border:2px solid #d98b19;background:repeating-linear-gradient(90deg,#174e97 0 20px,#2871bb 21px 22px)}
+.cube:before{right:47px;transform:skewY(7deg)}.cube:after{left:47px;transform:skewY(-7deg)}
+.ant{position:absolute;left:50%;top:-29px;width:2px;height:27px;background:#cbd83a}
+.hud{position:absolute;top:6px;left:6px;background:#142739dc;border:1px solid #2b4457;border-radius:4px;color:#fff;padding:5px 7px;font:500 9px Consolas}.hud2{left:auto;right:6px;color:#8ecab8}.axes{position:absolute;left:7px;bottom:6px;color:#13caff;font:700 9px Consolas}
+.attfoot{height:31px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px}.attfoot div{border:1px solid #e2e9ef;background:#fafbfd;border-radius:5px;display:grid;place-items:center;color:#8196ad;font-size:9px}.attfoot b{font:500 9.5px Consolas;color:#102944}
+
+.payloadbody{height:calc(100% - 31px);display:grid;grid-template-columns:1.62fr .92fr;gap:6px}.camera{position:relative;border-radius:6px;overflow:hidden;background:linear-gradient(135deg,#0a3571 0 22%,#1177b5 23% 45%,#5c8652 46% 62%,#d8e7d8 63% 70%,#496f45 71% 82%,#0a396d 83%);filter:saturate(.65)}
+.camera:after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;background:#d8e4e0aa;right:-20px;top:35px;box-shadow:-50px 10px 0 #497c4dcc;pointer-events:none}
+.camtop,.cambottom{position:absolute;left:7px;right:7px;z-index:3;font:700 8px Consolas}.camtop{top:7px;color:#b3d7e4}.cambottom{bottom:6px;background:#061222df;color:#fff;padding:5px;line-height:1.6}.live{float:right;color:#0ee09a}
+.pinfo{display:flex;flex-direction:column;min-width:0}.prow{display:flex;justify-content:space-between;gap:5px;padding:6px 2px;border-bottom:1px solid #edf1f5;color:#617b95;font-size:10.5px;white-space:nowrap}.prow b{font:500 9.5px Consolas;color:#102944}.shoot{margin-top:auto;border:1px solid #78649c;border-radius:5px;background:#78649c;color:#fff;padding:8px;font-weight:600;font-size:9.5px;cursor:pointer}.shoot:hover{background:#6c598f}
+
+.commgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}.commbox{border:1px solid #e2e8ef;border-radius:5px;background:#f9fbfd;padding:5px 6px;min-height:43px}.commbox small{display:block;color:#74859a;font-size:8.5px}.commbox b{font:500 9.5px Consolas;color:#273e54}.signal{float:right;color:#09b978;font-size:13px}.commfoot{display:flex;justify-content:space-between;margin-top:6px;color:#7189a2;font:9.5px Consolas}
+.rwtitle{color:#8499b0;font-weight:700;font-size:9.5px;margin:2px 0 4px}.wheels{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:6px}.wheel{text-align:center;border:1px solid #e1e9ee;border-radius:5px;padding:4px}.wheel small{color:#899fb5;font-size:8px}.wheel b{display:block;font:500 10.5px Consolas}.en{color:#00a873;font:700 9px Consolas}.dis{color:#f03b50;font:700 9px Consolas}.adrow{display:flex;justify-content:space-between;gap:6px;background:#f8fafc;border:1px solid #e4ebf1;border-radius:4px;padding:3px 7px;margin-top:3px;color:#607b94;font-size:10px}.adrow b{font:500 9.2px Consolas;color:#102944}
+
+.cmd{background:#142333;border-color:#21364b;color:#9bafc2;display:flex;flex-direction:column}.cmd .head{color:#e3edf5;border-color:#2b3d4e}.cmd .head:before{display:none}.lights{color:#738a9d;letter-spacing:2px;margin-right:6px}.terminal{flex:1;min-height:0;overflow:auto;overflow-wrap:anywhere;font:9.8px/1.6 Consolas;color:#9bafc2}.terminal .green{color:#86c6b1}.terminal .cyan{color:#8ab9d8}.cmdline{flex-shrink:0;margin-top:8px;border-top:1px solid #2a4054;padding-top:6px;display:flex;align-items:center;gap:6px;font:9.5px Consolas}.cmdline input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:#7992ad;font:9.5px Consolas}.send{border:1px solid #397fae;border-radius:5px;background:#397fae;color:#fff;padding:6px 12px;font-weight:600;cursor:pointer}
+.cmd .head button{background:transparent;color:#92abc3;border:1px solid #30455b;border-radius:4px;font:10px 'Segoe UI',Arial;padding:4px 6px;cursor:pointer}
+
+.bottom{min-height:0;display:grid;grid-template-columns:1.48fr 1fr;gap:7px}
+.solar,.alt{height:160px}.solargrid{height:106px;display:grid;grid-template-columns:repeat(6,1fr);gap:4px}.panel{border:1px solid #e2e8ef;background:#f9fbfd;border-radius:5px;padding:5px 7px;height:106px}.panelhead{font-size:10.5px;font-weight:600}.act{float:right;background:#eaf4ef;color:#447d69;border-radius:3px;padding:2px 4px;font:700 8px Consolas}.pv{display:flex;justify-content:space-between;margin-top:3px;color:#6d849d;font-size:8.5px}.pv b{font:500 9.5px Consolas;color:#17304a}.pv.p b{color:#ac874c}
+.controls{margin-left:auto;font-size:9px;color:#7089a2}.controls span{padding:3px}.controls .sel{background:#f1f6fa;border:1px solid #dce6ee;border-radius:4px;color:#078fd7}
+.altbody{height:111px;display:grid;grid-template-columns:1.12fr 1fr;gap:8px}.ctitle{height:19px;display:flex;justify-content:space-between;align-items:center;color:#7890aa;font-size:8.5px}.ctitle b{font:500 9.8px Consolas;color:#17304a}.linechart,.bars{height:88px;border:1px solid #e3e9ef;border-radius:5px;overflow:hidden}.linechart{background:repeating-linear-gradient(to right,transparent 0 54px,#eaf0f3 55px),repeating-linear-gradient(to top,transparent 0 23px,#eaf0f3 24px);display:grid;place-items:center;color:#8298b0;font-size:10px;text-align:center}.linechart svg{width:100%;height:100%}.bars{display:flex;align-items:flex-end;justify-content:space-around;padding:14px 7px 2px}.bw{text-align:center;color:#607990;font-size:8px}.bar{width:36px;border-radius:4px 4px 0 0;position:relative;background:#754ee8;transition:height .3s}.bar.b2{background:#3194e8}.bar.b3{background:#3cc79b}.bar.b4{background:#f2a241}.bar em{position:absolute;top:-14px;left:0;right:0;text-align:center;font:700 8px Consolas;color:#17304a}
+
+button{border:1px solid #dbe7ee;border-radius:4px;background:#fff;color:#53718f;font:inherit;cursor:pointer}button:hover{border-color:#a9bfd2}
+</style></head><body><div id="overview">
+<header class="topbar"><h1>Mission Overview</h1><span class="desc" id="desc">Esperando telemetría…</span>
+  <div class="kpis">
+    <div class="kpi"><div><small>VBATT</small><b id="kpi-vbatt">— —</b></div></div>
+    <div class="kpi"><div><small>IBATT</small><b id="kpi-ibatt">— —</b></div></div>
+    <div class="kpi"><div><small>VBUS</small><b id="kpi-vbus">— —</b></div></div>
+    <div class="kpi"><div><small>MET (UPTIME)</small><b id="kpi-met">— —</b></div></div>
+  </div>
+</header>
+<div class="dashboard"><div class="topgrid">
+
+  <div class="col col-left">
+    <section class="card eps">
+      <div class="head">EPS SUMMARY <span class="right tag" id="eps-soc-tag">SOC —</span></div>
+      <div class="capacity"><span>Li-ion battery capacity</span><b id="eps-capacity-text">— % (—)</b></div>
+      <div class="track"><i id="eps-track" style="width:0%"></i></div>
+      <div class="power">
+        <div class="donut" id="eps-donut" data-total="— W&#10;TOTAL"></div>
+        <div class="legend" id="eps-legend"></div>
+      </div>
+      <div class="metrics" id="eps-metrics"></div>
+    </section>
+    <section class="card comms">
+      <div class="head">COMMS SUMMARY <span class="right tag" id="comms-tag">—</span></div>
+      <div class="commgrid" id="comms-grid"></div>
+      <div class="commfoot"><span>Último TX: <b id="comms-lasttx">—:—:—</b></span><span>Doppler: <b>—</b></span></div>
+    </section>
+  </div>
+
+  <div class="col col-center">
+    <section class="card attitude">
+      <div class="head">3D ATTITUDE · CUBESAT 3U<span class="right"><button id="wire">Wireframe</button> <button id="center">Center</button></span></div>
+      <div class="viewer" id="viewer">
+        <div class="earth"></div>
+        <div class="cube" id="cube"><i class="ant"></i></div>
+        <div class="hud" id="hud-rpy">● R: — &nbsp;● P: — &nbsp;● Y: —</div>
+        <div class="hud hud2" id="hud-stable">SIN DATOS REALES</div>
+        <div class="axes">+X Roll　+Y Pitch　+Z Yaw</div>
+      </div>
+      <div class="attfoot">
+        <div>ALTITUD: <b>—</b></div>
+        <div>INCLINACIÓN: <b>—</b></div>
+        <div>MODO: <b>—</b></div>
+      </div>
+    </section>
+    <section class="card adcs">
+      <div class="head">ADCS HARDWARE <span class="right tag" id="adcs-tag">—</span></div>
+      <div class="rwtitle">REACTION WHEELS (RPM)</div>
+      <div class="wheels" id="adcs-wheels"></div>
+      <div class="adrow"><span>Magnetorquer (mA):</span><b id="adcs-mtq">—</b></div>
+      <div class="adrow"><span>Quaternion:</span><b id="adcs-quat">[ —, —, —, — ]</b></div>
+      <div class="adrow"><span>Ángulo solar:</span><b id="adcs-sun">—</b></div>
+    </section>
+  </div>
+
+  <div class="col col-right">
+    <section class="card payload">
+      <div class="head">PAYLOAD · CÁMARA<span class="right tag">DEMO · ver pestaña Payload</span></div>
+      <div class="payloadbody">
+        <div class="camera"><div class="camtop">STREAM [CAM-01]<span class="live">● DEMO</span></div><div class="cambottom">Visor real y captura en la pestaña Payload</div></div>
+        <div class="pinfo">
+          <div class="prow">Sensor Temp: <b>—</b></div>
+          <div class="prow">Focus Position: <b>—</b></div>
+          <div class="prow">Imágenes recibidas: <b id="payload-count">0</b></div>
+          <div class="prow">Storage SD: <b>—</b></div>
+          <button class="shoot" id="goto-payload">Ir a Payload →</button>
+        </div>
+      </div>
+    </section>
+    <section class="card cmd">
+      <div class="head"><span class="lights">●●●</span>CMD CONSOLE (log en vivo)<button id="clear" class="right">Clear</button></div>
+      <div class="terminal" id="terminal" role="log" aria-live="polite"></div>
+      <div class="cmdline"><span class="cyan">IS&gt;</span><input id="cmdinput" placeholder="Solo lectura por ahora…" disabled><button class="send" disabled>Send</button></div>
+    </section>
+  </div>
+
+</div><div class="bottom">
+  <section class="card solar">
+    <div class="head">ARREGLO SOLAR · TELEMETRÍA<span class="right" style="font:9px Consolas">TOTAL: <b id="solar-total">—</b></span></div>
+    <div class="solargrid" id="solar-grid"></div>
+  </section>
+  <section class="card alt">
+    <div class="head">ALTITUD &amp; TÉRMICA<div class="controls"><b id="thermal-state" style="color:#8298b0">● SIN DATOS DE ALTITUD</b></div></div>
+    <div class="altbody">
+      <div><div class="ctitle"><span>Altitud orbital (km)</span><b>—</b></div><div class="linechart">Sin fuente de altitud real todavía</div></div>
+      <div><div class="ctitle"><span>Temperaturas de subsistemas (°C)</span><b id="thermal-nominal">—</b></div><div class="bars" id="thermal-bars"></div></div>
+    </div>
+  </section>
+</div></div>
+</div>
+<script src="/dashboard-common.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const $id=id=>document.getElementById(id);
+
+// Fixed design canvas (1480x740, same as the reference) scaled to fit the
+// iframe — keeps every card's proportions identical regardless of the
+// viewport's actual height, instead of letting the fr-sized grid rows
+// stretch to fill whatever space happens to be available.
+function fit(){const k=Math.min(innerWidth/1480,innerHeight/740),e=$id('overview');e.style.width=innerWidth/k+'px';e.style.height=innerHeight/k+'px';e.style.transform='scale('+k+')'}
+fit();addEventListener('resize',fit);
+
+const PWR = [
+  { key: 'OBC', ch: 'sim.eps_pwr_obc', cls: 'b' },
+  { key: 'ADCS', ch: 'sim.eps_pwr_adcs', cls: 'p' },
+  { key: 'COMMS', ch: 'sim.eps_pwr_comms', cls: 'o' },
+  { key: 'TCS', ch: 'sim.eps_pwr_tcs', cls: 'g' },
+]
+const PWR_COLOR = { b: '#428cb8', o: '#cba25d', p: '#8a77b4', g: '#53a38f' }
+
+function fmtUptime(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60);const p=n=>String(n).padStart(2,'0');return `${p(h)}:${p(m)}:${p(sec)}`}
+
+async function refresh(){
+  const m = await IntisatDash.latest()
+  const f = (ch, unit, dec) => IntisatDash.fmt(m, ch, unit, dec)
+  const have = Object.keys(m).length > 0
+  $id('desc').textContent = have ? 'Telemetría en vivo' : 'Esperando telemetría — sin frames recibidos todavía'
+
+  $id('kpi-vbatt').textContent = f('sim.eps_batt_voltage', 'V', 2)
+  $id('kpi-ibatt').textContent = f('sim.eps_batt_current', 'A', 2)
+  $id('kpi-vbus').textContent = f('sim.eps_bus_voltage', 'V', 2)
+  $id('kpi-met').textContent = m['sim.obc_uptime'] !== undefined ? fmtUptime(m['sim.obc_uptime']) : '— —'
+
+  // EPS
+  const soc = m['sim.eps_batt_soc']
+  $id('eps-soc-tag').textContent = soc === undefined ? 'SOC —' : `SOC ${soc.toFixed(0)}%`
+  $id('eps-capacity-text').textContent = soc === undefined ? '— % (—)' : `${soc.toFixed(0)}% (${soc >= 30 ? 'Nominal' : 'Bajo'})`
+  $id('eps-track').style.width = soc === undefined ? '0%' : `${Math.max(0, Math.min(100, soc))}%`
+
+  const values = PWR.map((p) => m[p.ch])
+  const total = values.reduce((s, v) => s + (v ?? 0), 0)
+  let cursor = 0
+  const stops = []
+  for (let i = 0; i < PWR.length; i++) {
+    const v = values[i] ?? 0
+    const frac = total > 0 ? v / total : 0
+    const next = cursor + frac * 100
+    stops.push(`${PWR_COLOR[PWR[i].cls]} ${cursor}% ${next}%`)
+    cursor = next
+  }
+  $id('eps-donut').style.background = total > 0 ? `conic-gradient(${stops.join(',')})` : 'var(--line)'
+  $id('eps-donut').setAttribute('data-total', total > 0 ? `${total.toFixed(1)} W\nTOTAL` : '— W\nTOTAL')
+  $id('eps-legend').innerHTML = PWR.map((p, i) => {
+    const v = values[i]
+    const pct = total > 0 && v !== undefined ? ((v / total) * 100).toFixed(0) + '%' : '—'
+    return `<span><b class="${p.cls}">■</b> ${p.key}<strong>&nbsp;${pct}</strong></span><span class="watts">${v !== undefined ? v.toFixed(2) + ' W' : '—'}</span>`
+  }).join('')
+  $id('eps-metrics').innerHTML = [
+    ['VBATT', f('sim.eps_batt_voltage', 'V', 2)],
+    ['IBATT', f('sim.eps_batt_current', 'A', 2)],
+    ['VBUS', f('sim.eps_bus_voltage', 'V', 2)],
+    ['5V Rail', '— —'],
+    ['3.3V Rail', '— —'],
+    ['Temp. EPS', '— —'],
+  ].map(([a, b]) => `<div class="metric"><small>${a}</small><b>${b}</b></div>`).join('')
+
+  // COMMS
+  const haveComms = m['sim.coms_rssi'] !== undefined
+  $id('comms-tag').textContent = haveComms ? 'NOMINAL' : 'SIN DATOS'
+  $id('comms-grid').innerHTML = [
+    ['UPLINK (UHF)', f('sim.coms_uplink_rate', 'bps', 0)],
+    ['DOWNLINK (S-BAND)', f('sim.coms_downlink_rate', 'bps', 0)],
+    ['RSSI', f('sim.coms_rssi', 'dBm', 1)],
+    ['SNR', f('sim.coms_snr', 'dB', 1)],
+  ].map(([a, b]) => `<div class="commbox"><small>${a}</small><b>${b}</b></div>`).join('')
+  if (m['sim.coms_tx_duration'] !== undefined) {
+    $id('comms-lasttx').textContent = new Date().toLocaleTimeString()
+  }
+
+  // ADCS
+  const rw = [m['sim.adcs_rw_speed_1'], m['sim.adcs_rw_speed_2'], m['sim.adcs_rw_speed_3'], undefined]
+  $id('adcs-wheels').innerHTML = rw.map((v, i) => {
+    const en = v !== undefined
+    return `<div class="wheel"><small>RW${i + 1}</small><b>${en ? v.toFixed(0) : '0'}</b><span class="${en ? 'en' : 'dis'}">${en ? 'EN' : 'DIS'}</span></div>`
+  }).join('')
+  const mtqX = m['sim.adcs_mtq_current']
+  $id('adcs-mtq').textContent = mtqX === undefined ? '—' : `X: ${mtqX.toFixed(1)} Y: — Z: —`
+  const [qw, qx, qy, qz] = ['sim.adcs_quat_w', 'sim.adcs_quat_x', 'sim.adcs_quat_y', 'sim.adcs_quat_z'].map((c) => m[c])
+  $id('adcs-quat').textContent = qw === undefined ? '[ —, —, —, — ]' : `[ ${qw.toFixed(3)}, ${qx.toFixed(3)}, ${qy.toFixed(3)}, ${qz.toFixed(3)} ]`
+  $id('adcs-sun').textContent = f('sim.adcs_sun_angle', '°', 1)
+  $id('adcs-tag').textContent = qw !== undefined ? 'ESTABLE (3-EJES)' : 'SIN DATOS'
+
+  if (qw !== undefined) {
+    yaw = Math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz))
+    pitch = Math.asin(Math.max(-1, Math.min(1, 2 * (qw * qy - qz * qx))))
+    applyCube()
+    $id('hud-rpy').innerHTML = `● R: ${(yaw * 180 / Math.PI).toFixed(1)}°&nbsp;● P: ${(pitch * 180 / Math.PI).toFixed(1)}°&nbsp;● Y: —`
+    $id('hud-stable').textContent = 'TELEMETRÍA EN VIVO'
+  } else {
+    $id('hud-rpy').textContent = '● R: — ● P: — ● Y: —'
+    $id('hud-stable').textContent = 'SIN DATOS REALES'
+  }
+
+  // Payload (count only — real viewer lives in the Payload tab)
+  try {
+    const r = await fetch('/api/images')
+    if (r.ok) { const { images } = await r.json(); $id('payload-count').textContent = images.length }
+  } catch {}
+
+  // Solar
+  $id('solar-total').textContent = f('sim.eps_solar_total_power', 'W', 2)
+  $id('solar-grid').innerHTML = [1, 2, 3, 4, 5, 6].map((n) => {
+    const v = f(`sim.eps_solar_voltage_${n}`, 'V', 2)
+    const a = f(`sim.eps_solar_current_${n}`, 'A', 2)
+    const t = f(`sim.tcs_panel_temp_${n}`, '°C', 1)
+    const vv = m[`sim.eps_solar_voltage_${n}`], aa = m[`sim.eps_solar_current_${n}`]
+    const p = vv !== undefined && aa !== undefined ? (vv * aa).toFixed(2) + 'W' : '—'
+    return `<div class="panel"><div class="panelhead">P${n}</div><div class="pv"><span>V:</span><b>${v}</b></div><div class="pv"><span>I:</span><b>${a}</b></div><div class="pv"><span>T:</span><b>${t}</b></div><div class="pv p"><span>P:</span><b>${p}</b></div></div>`
+  }).join('')
+
+  // Thermal bars
+  const temps = [
+    { key: 'OBC', v: m['sim.obc_temp'], cls: '' },
+    { key: 'EPS', v: undefined, cls: 'b2' },
+    { key: 'BATT', v: m['sim.eps_batt_temp'], cls: 'b3' },
+    { key: 'PLD', v: undefined, cls: 'b4' },
+  ]
+  const known = temps.filter((t) => t.v !== undefined).map((t) => t.v)
+  const max = known.length ? Math.max(...known, 1) : 60
+  $id('thermal-bars').innerHTML = temps.map((t) => {
+    const h = t.v !== undefined ? Math.max(4, (t.v / max) * 80) : 2
+    return `<div class="bw"><div class="bar ${t.cls}" style="height:${h}px">${t.v !== undefined ? `<em>${t.v.toFixed(0)}°</em>` : ''}</div>${t.key}</div>`
+  }).join('')
+  $id('thermal-nominal').textContent = known.length ? 'NOMINAL' : 'SIN DATOS'
+}
+
+$id('goto-payload').onclick = () => { window.parent?.postMessage({ type: 'navigate', to: '/dashboard/payload' }, '*') }
+
+// Live log console via the real telemetry WebSocket (same origin).
+const terminal = $id('terminal')
+function log(text, cls=''){const line=document.createElement('div');if(cls)line.className=cls;line.textContent=text;terminal.append(line);while(terminal.children.length>200)terminal.firstChild.remove();terminal.scrollTop=terminal.scrollHeight}
+log('Conectando al log en vivo…', 'cyan')
+function connectWs(){
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const ws = new WebSocket(`${proto}//${location.host}/ws/live`)
+  ws.onopen = () => log('Conectado.', 'green')
+  ws.onclose = () => { log('Desconectado, reintentando…'); setTimeout(connectWs, 2000) }
+  ws.onerror = () => ws.close()
+  ws.onmessage = (ev) => {
+    try {
+      const frame = JSON.parse(ev.data)
+      const ts = new Date((frame.ts ?? Date.now() / 1000) * 1000).toLocaleTimeString()
+      if (frame.kind === 'log') log(`[${ts}] ${frame.text}`)
+      else if (frame.kind === 'message') log(`[${ts}] ${frame.source} · ${frame.pkt_type_name || 'type ' + frame.pkt_type} · ${frame.decoded ? 'decodificado' : 'error'}`)
+    } catch {}
+  }
+}
+connectWs()
+$id('clear').onclick = () => terminal.replaceChildren()
+
+// Decorative 3D cube (drag to rotate) — real roll/pitch applied from
+// quaternion in refresh() above when attitude telemetry is available.
+let yaw=.65, pitch=-.22, drag=null, wire=false
+function applyCube(){ $id('cube').style.transform = `translate(-50%,-50%) rotateY(${yaw}rad) rotateX(${-pitch}rad)` }
+applyCube()
+const viewer = $id('viewer'), cube = $id('cube')
+viewer.onpointerdown = e => { drag = [e.clientX, e.clientY]; viewer.setPointerCapture(e.pointerId) }
+viewer.onpointermove = e => { if (!drag) return; yaw += (e.clientX - drag[0]) * .01; pitch = Math.max(-1.3, Math.min(1.3, pitch + (e.clientY - drag[1]) * .01)); drag = [e.clientX, e.clientY]; applyCube() }
+viewer.onpointerup = viewer.onpointercancel = () => drag = null
+$id('center').onclick = () => { yaw = .65; pitch = -.22; applyCube() }
+$id('wire').onclick = () => { wire = !wire; cube.style.background = wire ? 'transparent' : '#36434f'; cube.style.boxShadow = wire ? 'none' : 'inset 0 0 0 5px #687680' }
+
+refresh()
+setInterval(refresh, 2000)
+</script>
+</body></html>

@@ -41,29 +41,31 @@ def _handle_tlm(ch_client, frame: dict):
     state["last_frame_ts"] = ts
     state["frames_received"] += 1
 
-    try:
-        clickhouse_client.insert_frame(ch_client, ts, source, channels, satellite_id)
-    except Exception as e:
-        print(f"[zmq_ingest] ClickHouse insert (telemetry) failed: {e}")
+    if ch_client is not None:
+        try:
+            clickhouse_client.insert_frame(ch_client, ts, source, channels, satellite_id)
+        except Exception as e:
+            print(f"[zmq_ingest] ClickHouse insert (telemetry) failed: {e}")
 
     return {"kind": "telemetry", **frame}
 
 
 def _handle_msg(ch_client, frame: dict):
-    try:
-        clickhouse_client.insert_message(
-            ch_client,
-            ts=frame.get("ts", time.time()),
-            satellite_id=frame.get("satellite_id", ""),
-            source=frame.get("source", "mcu"),
-            pkt_type=frame.get("pkt_type", 0),
-            pkt_type_name=frame.get("pkt_type_name", ""),
-            decoded=frame.get("decoded", True),
-            error=frame.get("error", ""),
-            size_bytes=frame.get("size_bytes", 0),
-        )
-    except Exception as e:
-        print(f"[zmq_ingest] ClickHouse insert (message) failed: {e}")
+    if ch_client is not None:
+        try:
+            clickhouse_client.insert_message(
+                ch_client,
+                ts=frame.get("ts", time.time()),
+                satellite_id=frame.get("satellite_id", ""),
+                source=frame.get("source", "mcu"),
+                pkt_type=frame.get("pkt_type", 0),
+                pkt_type_name=frame.get("pkt_type_name", ""),
+                decoded=frame.get("decoded", True),
+                error=frame.get("error", ""),
+                size_bytes=frame.get("size_bytes", 0),
+            )
+        except Exception as e:
+            print(f"[zmq_ingest] ClickHouse insert (message) failed: {e}")
 
     return {"kind": "message", **frame}
 
@@ -75,7 +77,11 @@ def _worker(loop: asyncio.AbstractEventLoop):
     sock.connect(config.ZMQ_ENDPOINT)
     for topic in (b"TLM", b"MSG", b"LOG"):
         sock.setsockopt(zmq.SUBSCRIBE, topic)
-    ch_client = clickhouse_client.get_client()
+    try:
+        ch_client = clickhouse_client.get_client()
+    except Exception as e:
+        print(f"[zmq_ingest] ADVERTENCIA: ClickHouse no disponible, solo WS en vivo (sin historial): {e}")
+        ch_client = None
     state["connected"] = True
     print(f"[zmq_ingest] subscribed to {config.ZMQ_ENDPOINT}")
 

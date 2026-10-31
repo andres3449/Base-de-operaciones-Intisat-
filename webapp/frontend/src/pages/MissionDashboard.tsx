@@ -1,0 +1,35 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { HistoryChart } from '../components/HistoryChart'
+import { AttitudeView, Metric, PacketConsole, Panel, PayloadImage, PowerDistribution, SolarPanels } from '../components/MissionTelemetry'
+
+export function Dashboard() {
+  return <div className="mission-page"><div className="mission-overview">
+    <div className="mission-columns">
+      <div className="mission-column"><Panel title="POWER DISTRIBUTION · EPS"><PowerDistribution /><div className="mission-metrics"><Metric label="Battery" channel="eps_batt_voltage" unit="V" /><Metric label="Current" channel="eps_batt_current" unit="A" /><Metric label="State of charge" channel="eps_batt_soc" unit="%" decimals={1} /><Metric label="Bus voltage" channel="eps_bus_voltage" unit="V" /><Metric label="Bus current" channel="eps_bus_current" unit="A" /><Metric label="Battery temp." channel="eps_batt_temp" unit="°C" decimals={1} /></div></Panel><Panel title="COMMUNICATIONS"><div className="mission-metrics"><Metric label="RSSI" channel="coms_rssi" unit="dBm" decimals={1} /><Metric label="SNR" channel="coms_snr" unit="dB" decimals={1} /><Metric label="Downlink" channel="coms_downlink_rate" unit="bps" decimals={0} /><Metric label="BER" channel="coms_ber" decimals={5} /></div><Link to="/dashboard/comms">Open RF workspace →</Link></Panel></div>
+      <div className="mission-column"><Panel title="ATTITUDE · CUBESAT 3U"><AttitudeView /></Panel><Panel title="ATTITUDE DETERMINATION & CONTROL"><div className="mission-metrics">{[1,2,3].map(n=><Metric key={n} label={`Reaction wheel ${n}`} channel={`adcs_rw_speed_${n}`} unit="RPM" decimals={0} />)}</div><Metric label="Attitude error" channel="adcs_attitude_error" unit="°" /><Metric label="Magnetorquer" channel="adcs_mtq_current" unit="mA" /><Metric label="Sun angle" channel="adcs_sun_angle" unit="°" /><Metric label="RW torque" channel="adcs_rw_torque" unit="mN·m" decimals={4} /></Panel></div>
+      <div className="mission-column"><Panel title="PAYLOAD · LAST RECEIVED IMAGE"><PayloadImage compact /><Link to="/dashboard/payload">Open image viewer →</Link></Panel><PacketConsole /></div>
+    </div><div className="mission-bottom"><Panel title="SOLAR PANEL TELEMETRY"><SolarPanels /></Panel><Panel title="THERMAL & ALTITUDE"><div className="mission-metrics"><Metric label="OBC" channel="obc_temp" unit="°C" decimals={1} /><Metric label="PA" channel="coms_pa_temp" unit="°C" decimals={1} /><Metric label="Battery" channel="eps_batt_temp" unit="°C" decimals={1} /><Metric label="Altitude" /></div><small>Altitude source not connected</small></Panel></div>
+  </div></div>
+}
+
+export function EpsThermal() {
+  const [range,setRange]=useState(30)
+  return <div className="mission-page"><div className="mission-eps-layout">
+    <div className="mission-three"><Panel title="POWER DISTRIBUTION · EPS"><Metric label="Battery voltage" channel="eps_batt_voltage" unit="V" /><Metric label="Battery current" channel="eps_batt_current" unit="A" /><Metric label="State of charge" channel="eps_batt_soc" unit="%" /><Metric label="Bus voltage" channel="eps_bus_voltage" unit="V" /><Metric label="Bus current" channel="eps_bus_current" unit="A" /></Panel><Panel title="THERMAL CONTROL · TCS"><Metric label="Battery" channel="eps_batt_temp" unit="°C" /><Metric label="OBC" channel="obc_temp" unit="°C" /><Metric label="PA" channel="coms_pa_temp" unit="°C" /><Metric label="Heater current" channel="tcs_heater_current" unit="A" /></Panel><Panel title="ON-BOARD COMPUTER"><Metric label="CPU load" channel="obc_cpu_load" unit="%" /><Metric label="RAM usage" channel="obc_ram_usage" unit="%" /><Metric label="Filesystem" channel="obc_fs_usage" unit="%" /><Metric label="Uptime" channel="obc_uptime" unit="s" decimals={0} /><Metric label="Status code" channel="obc_status" decimals={0} /></Panel></div>
+    <div className="mission-two"><Panel title="POWER CONSUMPTION SHARE"><PowerDistribution /></Panel><Panel title="CONSUMPTION HISTORY"><label className="mission-range">History <select value={range} onChange={e=>setRange(Number(e.target.value))}><option value={30}>30 min</option><option value={60}>1 hour</option><option value={360}>6 hours</option><option value={1440}>24 hours</option></select></label><HistoryChart title="OBC power · W" channel="sim.eps_pwr_obc" unit="W" range={range} height={110} /></Panel></div>
+    <div className="mission-two"><Panel title="BATTERY HISTORY"><HistoryChart title="Voltage · V" channel="sim.eps_batt_voltage" unit="V" range={range} height={110} /></Panel><Panel title="THERMAL HISTORY"><HistoryChart title="Battery temperature · °C" channel="sim.eps_batt_temp" unit="°C" range={range} height={110} /></Panel></div><Panel title="SOLAR PANEL TELEMETRY"><SolarPanels /></Panel>
+  </div></div>
+}
+
+export function Adcs() {
+  return <div className="mission-page"><div className="mission-adcs-layout"><div className="mission-three">
+    <Panel title="ADCS SENSORS">{['x','y','z'].map(a=><Metric key={a} label={`Magnetometer ${a.toUpperCase()}`} channel={`adcs_mag_${a}`} unit="µT" />)}{['x','y','z'].map(a=><Metric key={a} label={`Gyroscope ${a.toUpperCase()}`} channel={`adcs_gyro_${a}`} unit="°/s" />)}<Metric label="Sun angle" channel="adcs_sun_angle" unit="°" /></Panel>
+    <Panel title="ADCS ACTUATORS">{[1,2,3].map(n=><Metric key={n} label={`Reaction wheel ${n}`} channel={`adcs_rw_speed_${n}`} unit="RPM" decimals={0} />)}<Metric label="Magnetorquer" channel="adcs_mtq_current" unit="mA" /><Metric label="RW torque" channel="adcs_rw_torque" unit="mN·m" decimals={4} /><Metric label="Control mode" /></Panel>
+    <Panel title="ATTITUDE STATE">{['w','x','y','z'].map(a=><Metric key={a} label={`Quaternion ${a}`} channel={`adcs_quat_${a}`} decimals={4} />)}{['x','y','z'].map(a=><Metric key={a} label={`Angular velocity ${a}`} channel={`adcs_ang_vel_${a}`} unit="°/s" />)}</Panel>
+  </div><div className="mission-adcs-bottom"><Panel title="3D ATTITUDE VIEW · CUBESAT 3U"><AttitudeView /></Panel><div className="mission-stack"><Panel title="ACCELEROMETER">{['x','y','z'].map(a=><Metric key={a} label={`Axis ${a}`} channel={`adcs_accel_${a}`} unit="m/s²" decimals={3} />)}</Panel><Panel title="ORBITAL ALTITUDE"><div className="mission-empty">Awaiting an altitude source</div></Panel><Panel title="ATTITUDE ERROR"><Metric label="Error" channel="adcs_attitude_error" unit="°" /><small>Orientation uses all four quaternion components. Drag changes the camera.</small></Panel></div></div></div></div>
+}
+
+export function Payload() {
+  return <div className="mission-page"><div className="mission-payload-layout"><Panel title="ORBITAL MICROSCOPE · IMAGE VIEWER"><PayloadImage /></Panel><div className="mission-stack"><Panel title="PAYLOAD TELEMETRY"><Metric label="Sensor temperature" /><Metric label="Focus position" /><Metric label="Exposure" /><small>Payload housekeeping source not connected.</small></Panel><Panel title="PAYLOAD ACTIONS"><p>Received images can be inspected and downloaded. Capture, lens calibration and sensor reset are not connected.</p></Panel><PacketConsole title="PAYLOAD / MISSION EVENTS" /></div></div></div>
+}

@@ -7,7 +7,7 @@ export function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/config'
+  const from = (location.state as { from?: string } | null)?.from ?? '/configuracion/sdr'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -22,7 +22,7 @@ export function Login() {
       await login(username, password)
       navigate(from, { replace: true })
     } catch {
-      setError('Usuario o contraseña incorrectos')
+      setError('Sign in failed. Check your credentials and server connection.')
     } finally {
       setSaving(false)
     }
@@ -31,11 +31,11 @@ export function Login() {
   return (
     <div className="page login-page">
       <div className="panel login-panel">
-        <div className="panel-title">Centro de Operaciones</div>
-        <p className="empty-note">Acceso restringido — Configuración y Programación.</p>
+        <div className="panel-title">Mission Control</div>
+        <p className="empty-note">Administrator access · Settings and Scheduling.</p>
         <form onSubmit={handleSubmit} className="config-form">
           <label>
-            Usuario
+            Username
             <input
               type="text"
               value={username}
@@ -45,12 +45,12 @@ export function Login() {
             />
           </label>
           <label>
-            Contraseña
+            Password
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </label>
           {error && <div className="config-error">{error}</div>}
           <button type="submit" disabled={saving}>
-            {saving ? 'Ingresando…' : 'Ingresar'}
+            {saving ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
       </div>

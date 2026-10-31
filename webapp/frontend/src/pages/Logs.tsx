@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTelemetry } from '../telemetry/TelemetryContext'
+import { SpectrumScope } from '../components/SpectrumScope'
 import { api, type HistoryPoint, type ImageInfo, type MessageEntry } from '../api'
 
 function fromLocalInputValue(v: string): number | undefined {
@@ -278,17 +279,27 @@ function VariablesPanel() {
   )
 }
 
-export function Logs() {
+export function LogsMensajes() {
   return (
     <div className="page">
-      <h2>Logs y tablas</h2>
+      <h2>Logs · Mensajes</h2>
 
       <div className="logs-top-row">
         <LivePanel />
         <LastImagePanel />
       </div>
 
+      <SpectrumScope theme="dark" title="ESPECTRO RF EN VIVO" />
+
       <MessagesPanel />
+    </div>
+  )
+}
+
+export function LogsVariables() {
+  return (
+    <div className="page">
+      <h2>Logs · Variables decodificadas</h2>
       <VariablesPanel />
     </div>
   )

@@ -24,6 +24,9 @@ def _get(env_name: str, section: str, key: str, cast=str):
 # ZMQ bridge published by Core/telemetry_publisher.py inside the PyQt5 app.
 ZMQ_ENDPOINT = _get("ZMQ_ENDPOINT", "zmq", "endpoint")
 
+# SDR C backend's own PUB (FFT topic), for the opt-in /ws/spectrum stream.
+SDR_FFT_ENDPOINT = _get("SDR_FFT_ENDPOINT", "sdr", "fft_endpoint")
+
 # ClickHouse (matches docker-compose.web.yml)
 CLICKHOUSE_HOST = _get("CH_HOST", "clickhouse", "host")
 CLICKHOUSE_PORT = _get("CH_PORT", "clickhouse", "port", int)
@@ -50,6 +53,13 @@ HEADLESS_CONFIG_PATH = os.path.normpath(
 # satellite_config.yaml — repo root, shared with headless_receiver.py.
 SATELLITE_CONFIG_PATH = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "satellite_config.yaml")
+)
+
+# libusb-1.0.dll bundled alongside intisat_sdr.exe — reused for the device
+# scan endpoint's raw USB enumeration (pyusb needs an explicit backend on
+# Windows; this is the same DLL the C SDR backend itself links against).
+LIBUSB_DLL_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "intisat_sdr", "build", "Release", "libusb-1.0.dll")
 )
 
 # Admin login for Configuración/Programación — no default committed here

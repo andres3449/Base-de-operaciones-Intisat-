@@ -71,6 +71,12 @@ export interface SatelliteConfig {
   }
 }
 
+export interface DetectedDevice {
+  driver: 'mcu' | 'limesdr' | 'rtlsdr'
+  label: string
+  detail: string
+}
+
 export interface MessageEntry {
   ts: number
   satellite_id: string
@@ -104,7 +110,10 @@ async function sendJSON<T>(url: string, method: string, body?: unknown): Promise
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new Error(`${method} ${url} -> ${res.status}`)
+  if (!res.ok) {
+    const error = await res.json().catch(() => null)
+    throw new Error(typeof error?.detail === 'string' ? error.detail : `${method} ${url} → ${res.status}`)
+  }
   return res.json()
 }
 
@@ -136,6 +145,10 @@ export const api = {
     sendJSON<OnceSchedule>('/api/schedule/once', 'POST', entry),
   deleteSchedule: (kind: 'recurring' | 'once', id: string) =>
     sendJSON<{ deleted: string }>(`/api/schedule/${kind}/${id}`, 'DELETE'),
+  updateSchedule: (kind: 'recurring' | 'once', id: string, entry: Partial<RecurringSchedule & OnceSchedule>) =>
+    sendJSON<RecurringSchedule | OnceSchedule>(`/api/schedule/${kind}/${encodeURIComponent(id)}`, 'PATCH', entry),
+  updateRuntime: (values: Record<string, number | string | number[]>) =>
+    sendJSON<{ status: string; hardware_verified: boolean }>('/api/sdr/runtime', 'POST', values),
   images: () => getJSON<{ images: ImageInfo[] }>('/api/images'),
   imageURL: (filename: string) => `/api/images/${encodeURIComponent(filename)}`,
 
@@ -143,6 +156,9 @@ export const api = {
     sendJSON<{ ok: boolean }>('/api/auth/login', 'POST', { username, password }),
   logout: () => sendJSON<{ ok: boolean }>('/api/auth/logout', 'POST'),
   me: () => getJSON<AuthStatus>('/api/auth/me'),
+
+  scanDevices: () => getJSON<DetectedDevice[]>('/api/sdr/scan'),
+  restartSdr: () => sendJSON<{ status: string; killed_pids: number[] }>('/api/sdr/restart', 'POST'),
 
   getSatellite: () => getJSON<SatelliteConfig>('/api/satellite'),
   putSatellite: (cfg: SatelliteConfig) => sendJSON<SatelliteConfig>('/api/satellite', 'PUT', cfg),
@@ -160,4 +176,9 @@ export const api = {
 export function wsURL(): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${proto}//${window.location.host}/ws/live`
+}
+
+export function wsSpectrumURL(): string {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${window.location.host}/ws/spectrum`
 }

@@ -1,0 +1,214 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTISAT — Pass Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="/orbit-ui/orbit.css">
+<script src="/orbit-ui/orbit-core.js"></script>
+<style>
+:root{--left-w:270px;--right-w:280px}
+.mini-globe{height:auto;flex:1 1 250px;min-height:150px;max-height:250px;padding-bottom:0}
+.left-col{scrollbar-width:none}.left-col::-webkit-scrollbar{display:none}
+.mini-globe:before{display:none}
+.mini-globe .viewport-card{height:100%}
+input[type=range]{width:100%;accent-color:var(--cyan-strong)}
+.legend-row{display:flex;gap:10px;align-items:center;font-size:8.5px;color:#5d7083}
+.legend-row i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+</style>
+</head><body class="space ui-away">
+<div class="shell">
+  <header id="hdr"></header>
+  <div class="grid-layout">
+    <aside class="left-col">
+      <div class="mini-globe viewport-wrap">
+        <div class="viewport-card">
+          <div class="viewport-title"><span>Position at scene time</span><small id="pos-state">—</small></div>
+          <div class="globe" id="globe"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Pair</div>
+        <div class="panel-body">
+          <label class="field">Satellite<select id="sel-sat"></select></label>
+          <label class="field">Ground station<select id="sel-st"></select></label>
+          <div class="kv"><span>Elevation mask</span><b id="mask">—</b></div>
+          <div class="kv"><span>Access now</span><b id="now-state">—</b></div>
+          <div class="kv"><span>Az / El now</span><b id="now-azel">—</b></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Day and time · UTC</div>
+        <div class="panel-body">
+          <div class="kv"><span>Selected day</span><b id="sel-day">—</b></div>
+          <div class="kv"><span>Time of day</span><b id="sel-tod">—</b></div>
+          <input type="range" id="tod" min="0" max="1435" step="5" aria-label="Time of day (UTC)">
+          <div class="chart-caption"><span>00:00</span><span>12:00</span><span>24:00</span></div>
+          <p class="note">Moving the slider pauses the scene clock on the selected day.</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="center-col">
+      <div class="panel grow">
+        <div class="cal-head">
+          <button class="btn" id="m-prev">‹</button>
+          <h2 id="m-title">—</h2>
+          <button class="btn" id="m-next">›</button>
+          <button class="btn" id="m-today">SCENE MONTH</button>
+        </div>
+        <div class="cal-grid" id="cal"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 10px 8px;gap:10px;flex-wrap:wrap">
+          <div class="legend-row"><span><i style="background:#16a34a"></i>max ≥ 45°</span><span><i style="background:#0284c7"></i>20–45°</span><span><i style="background:#d97706"></i>&lt; 20°</span></div>
+          <div class="legend-row" id="month-summary"></div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="right-col">
+      <div class="panel grow" style="min-height:200px">
+        <div class="panel-header">Passes · <span id="day-title" style="text-transform:none">—</span> <small id="day-count"></small></div>
+        <div style="flex:1;min-height:0;overflow:auto">
+          <table class="pass-table"><thead><tr><th>AOS–LOS (UTC)</th><th>Dur</th><th>Max el</th></tr></thead><tbody id="day-body"></tbody></table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Selected pass</div>
+        <div class="panel-body" id="sel-body"><div class="empty">Select a pass of the day.</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Scene time</div>
+        <div class="panel-body" id="time"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict'
+  const O = Orbit, $ = (id) => document.getElementById(id)
+  O.mountHeader($('hdr'), 'Pass Calendar')
+  const globe = O.createGlobe($('globe'), { stars: false, distance: 21000, intro: false })
+  globe.focusStation(O.activeStation())
+
+  const dayOf = (ms) => { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) }
+  let monthStart = monthOf(O.clock.t), selDay = dayOf(O.clock.t), cache = { key: '', passes: [] }, selected = null
+  function monthOf(ms) { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) }
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+  function gridRange() {
+    const first = new Date(monthStart), dow = (first.getUTCDay() + 6) % 7 // Monday first
+    const start = monthStart - dow * 86400000
+    return { start, end: start + 42 * 86400000 }
+  }
+
+  function compute() {
+    const s = O.activeSat(), st = O.activeStation()
+    if (!s || !st) return []
+    const { start, end } = gridRange()
+    const key = [s.id, s.tle.join(), st.id, st.lat, st.lon, st.mask, start].join('|')
+    if (key !== cache.key) { cache.key = key; cache.passes = O.predictPasses(s, st, start, end, 30) }
+    return cache.passes
+  }
+
+  function renderSelectors() {
+    const aS = O.activeSat(), aG = O.activeStation()
+    $('sel-sat').innerHTML = O.validSatellites().map((x) => '<option value="' + x.id + '"' + (aS && x.id === aS.id ? ' selected' : '') + '>' + O.esc(x.name) + '</option>').join('')
+    $('sel-st').innerHTML = O.stations().map((x) => '<option value="' + x.id + '"' + (aG && x.id === aG.id ? ' selected' : '') + '>' + O.esc(x.name) + '</option>').join('')
+    $('mask').textContent = aG ? aG.mask + '°' : '—'
+  }
+  $('sel-sat').onchange = () => O.setActiveSat($('sel-sat').value)
+  $('sel-st').onchange = () => { O.setActiveStation($('sel-st').value); globe.focusStation(O.activeStation()) }
+
+  function renderCalendar() {
+    const passes = compute(), { start } = gridRange(), today = dayOf(O.clock.t)
+    const d0 = new Date(monthStart)
+    $('m-title').textContent = MONTHS[d0.getUTCMonth()] + ' ' + d0.getUTCFullYear()
+    let html = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => '<div class="cal-dow">' + d + '</div>').join('')
+    let monthCount = 0, monthBest = null
+    for (let k = 0; k < 42; k++) {
+      const day = start + k * 86400000, inMonth = new Date(day).getUTCMonth() === d0.getUTCMonth()
+      const list = passes.filter((p) => p.aos >= day && p.aos < day + 86400000)
+      const best = list.reduce((m, p) => Math.max(m, p.maxEl), 0)
+      if (inMonth) { monthCount += list.length; if (list.length && (!monthBest || best > monthBest.el)) monthBest = { day, el: best } }
+      const heat = list.length ? 'background:' + (best >= 45 ? 'rgba(22,163,74,' : best >= 20 ? 'rgba(2,132,199,' : 'rgba(217,119,6,') + (0.05 + Math.min(best, 90) / 90 * 0.12) + ')' : ''
+      html += '<button class="cal-day' + (inMonth ? '' : ' out') + (day === selDay ? ' selected' : '') + (day === today ? ' today' : '') + '" data-day="' + day + '">' +
+        '<span class="heat" style="' + heat + '"></span><span class="num">' + new Date(day).getUTCDate() + '</span>' +
+        '<span class="count">' + (list.length ? list.length + ' pass' + (list.length > 1 ? 'es' : '') : '—') + '</span>' +
+        '<span class="best">' + (list.length ? 'max ' + best.toFixed(0) + '°' : '') + '</span>' +
+        '<span class="strip">' + list.map((p) => '<i style="left:' + ((p.aos - day) / 864e5) * 100 + '%;width:' + Math.max(1.2, ((p.los - p.aos) / 864e5) * 100) + '%;background:' + (p.maxEl >= 45 ? '#16a34a' : p.maxEl >= 20 ? '#0284c7' : '#d97706') + '"></i>').join('') + '</span></button>'
+    }
+    $('cal').innerHTML = html
+    $('month-summary').innerHTML = '<span>' + monthCount + ' passes this month</span>' + (monthBest ? '<span>best ' + monthBest.el.toFixed(1) + '° on ' + O.utcDate(monthBest.day) + '</span>' : '')
+    $('cal').querySelectorAll('[data-day]').forEach((b) => b.onclick = () => {
+      const day = +b.dataset.day
+      const tod = O.clock.t - dayOf(O.clock.t)
+      selDay = day
+      if (monthOf(day) !== monthStart) monthStart = monthOf(day)
+      O.setTime(day + tod)
+      selected = null
+      renderAll()
+    })
+  }
+
+  function renderDay() {
+    const passes = compute().filter((p) => p.aos >= selDay && p.aos < selDay + 86400000)
+    $('day-title').textContent = O.utcDate(selDay)
+    $('day-count').textContent = passes.length + ' passes'
+    $('sel-day').textContent = O.utcDate(selDay)
+    $('day-body').innerHTML = passes.map((p, k) => '<tr data-k="' + k + '"' + (selected && selected.aos === p.aos ? ' class="selected"' : '') + '><td>' + O.utcHM(p.aos) + '–' + O.utcHM(p.los) + '</td><td>' + O.dur(p.duration) + '</td><td class="el ' + O.elClass(p.maxEl) + '">' + p.maxEl.toFixed(1) + '°</td></tr>').join('') || '<tr><td colspan="3" class="empty">No passes above the mask on this day.</td></tr>'
+    $('day-body').querySelectorAll('[data-k]').forEach((tr) => tr.onclick = () => { selectPass(passes[+tr.dataset.k]); O.setPlaying(false); O.setTime(selected.tca) })
+  }
+
+  function selectPass(p) {
+    const s = O.activeSat(), st = O.activeStation()
+    selected = p
+    const track = O.passTrack(s, st, p, 80)
+    selected.track = track
+    globe.setTrack(O.groundTrack(s, p.aos, p.los, 80))
+    $('sel-body').innerHTML = '<svg class="sky" id="sky"></svg>' +
+      '<div class="kv"><span>AOS</span><b>' + O.utcTime(p.aos) + ' · ' + Math.round(p.aosAz) + '°</b></div>' +
+      '<div class="kv"><span>TCA</span><b>' + O.utcTime(p.tca) + ' · ' + p.maxEl.toFixed(1) + '°</b></div>' +
+      '<div class="kv"><span>LOS</span><b>' + O.utcTime(p.los) + ' · ' + Math.round(p.losAz) + '°</b></div>' +
+      '<div class="kv"><span>Duration</span><b>' + O.dur(p.duration) + '</b></div>'
+    O.skyPlot($('sky'), track, { mask: st.mask })
+    renderDay()
+  }
+
+  $('tod').oninput = () => {
+    O.setPlaying(false)
+    O.setTime(selDay + (+$('tod').value) * 60000)
+  }
+  $('m-prev').onclick = () => { const d = new Date(monthStart); monthStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1); renderCalendar() }
+  $('m-next').onclick = () => { const d = new Date(monthStart); monthStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); renderCalendar() }
+  $('m-today').onclick = () => { monthStart = monthOf(O.clock.t); selDay = dayOf(O.clock.t); renderAll() }
+
+  function renderAll() { renderSelectors(); renderCalendar(); renderDay() }
+  O.mountTimePanel($('time'), { onJump: (ms) => { selDay = dayOf(ms); monthStart = monthOf(ms); selected = null; globe.setTrack(null); renderAll() } })
+  O.onCatalog(() => { cache.key = ''; selected = null; globe.setTrack(null); $('sel-body').innerHTML = '<div class="empty">Select a pass of the day.</div>'; renderAll() })
+  renderAll()
+
+  let last = 0
+  O.stage([[() => {}, 500]], 120)
+  O.loop((ms) => {
+    const s = O.activeSat(), st = O.activeStation()
+    if (!s) return
+    globe.update(ms, { focus: s.id, station: st.id, linkStations: [st.id], only: [s.id] })
+    const now = performance.now()
+    if (now - last < 250) return
+    last = now
+    O.updateHeaderClock(ms)
+    const d = dayOf(ms)
+    if (d !== selDay) { selDay = d; if (monthOf(d) !== monthStart) monthStart = monthOf(d); selected = null; renderCalendar(); renderDay() }
+    const tod = Math.round((ms - d) / 60000)
+    if (document.activeElement !== $('tod')) $('tod').value = Math.min(1435, tod - (tod % 5))
+    $('sel-tod').textContent = O.utcTime(ms)
+    const x = O.state(s, st, ms), vis = x.visible === 1
+    $('now-state').textContent = vis ? 'IN VIEW' : 'BELOW MASK'
+    $('now-state').style.color = vis ? '#16a34a' : ''
+    $('now-azel').textContent = x.azimuth.toFixed(0) + '° / ' + x.elevation.toFixed(1) + '°'
+    $('pos-state').textContent = x.latitude.toFixed(1) + '°, ' + x.longitude.toFixed(1) + '°'
+    if (selected && ms >= selected.aos && ms <= selected.los && $('sky')) O.skyPlot($('sky'), selected.track, { mask: st.mask, current: { az: x.azimuth, el: x.elevation } })
+  })
+})()
+</script>
+</body></html>

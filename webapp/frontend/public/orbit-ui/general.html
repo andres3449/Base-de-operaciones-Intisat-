@@ -1,0 +1,262 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTISAT — Orbital Tracking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="/orbit-ui/orbit.css">
+<script src="/orbit-ui/orbit-core.js"></script>
+</head><body class="space space-full ui-away">
+<div class="shell">
+  <header id="hdr"></header>
+  <div class="grid-layout">
+    <aside class="left-col">
+      <div class="panel">
+        <div class="panel-header">Satellites <small id="sat-count"></small></div>
+        <div class="panel-body"><div class="obj-list" id="sat-list"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">TLE · <span id="tle-name" style="text-transform:none"></span></div>
+        <div class="panel-body">
+          <textarea class="tle" id="tle-input" spellcheck="false" wrap="off" aria-label="Two-line element set"></textarea>
+          <button class="btn block" id="tle-apply" style="margin-top:6px">APPLY TLE</button>
+          <div class="status-msg" id="tle-status"></div>
+          <p class="note">Two-body Kepler propagation with J2 secular drift. Estimate only: no drag or SGP4 short-period terms.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Scene time</div>
+        <div class="panel-body" id="time"></div>
+      </div>
+    </aside>
+
+    <main class="center-col">
+      <div class="viewport-wrap">
+        <div class="viewport-card">
+          <div class="viewport-title"><span id="view-title">Orbital view</span><small id="view-sub">Close view · drag to orbit, wheel to zoom</small></div>
+          <div class="globe" id="globe"></div>
+          <div class="coverage-key"><div><i></i>ORBIT (ALT ×3.6)</div><div><i class="link"></i>STATION IN VIEW</div></div>
+          <div class="hud camera-cross">
+            <span></span><button data-cam="up" title="Tilt up">▲</button><span></span>
+            <button data-cam="left" title="Rotate left">◀</button><button class="core" data-cam="reset" title="Reset view">●</button><button data-cam="right" title="Rotate right">▶</button>
+            <span></span><button data-cam="down" title="Tilt down">▼</button><span></span>
+          </div>
+          <div class="hud minimap"><div class="map" id="mini-map"></div><small id="mini-name"></small></div>
+          <div class="event-log" id="event-log"></div>
+          <div class="hud sat-hud" id="sat-hud">
+            <div class="title"><span id="hud-name">—</span><span id="hud-state" class="muted">—</span></div>
+            <div class="row"><span>Elevation</span><span id="hud-el">—</span></div>
+            <div class="row"><span>Azimuth</span><span id="hud-az">—</span></div>
+            <div class="row"><span>Range</span><span id="hud-range">—</span></div>
+            <div class="row"><span>Lat / Lon</span><span id="hud-ll">—</span></div>
+            <div class="row"><span>Altitude</span><span id="hud-alt">—</span></div>
+          </div>
+        </div>
+        <div class="bottom-dock" aria-label="Orbital view toolbar">
+          <button class="dock-btn on" id="btn-grid" title="Lat/lon grid">⌘</button>
+          <button class="dock-btn on" id="btn-labels" title="Labels">☷</button>
+          <span></span>
+          <button class="dock-btn on" id="btn-close" title="Close view · camera follows the satellite">◉</button>
+          <button class="dock-btn" id="btn-global" title="Global view · whole Earth">◎</button>
+          <span></span>
+          <button class="dock-btn" id="btn-full" title="Fullscreen">⛶</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="right-col">
+      <div class="panel" id="bridge"></div>
+      <div class="panel">
+        <div class="panel-header">Orbital elements</div>
+        <div class="panel-body">
+          <div class="chart-caption"><span>Altitude · one revolution</span><span id="alt-range"></span></div>
+          <svg class="mini-chart" id="chart-alt"></svg>
+          <div class="kv"><span>Mean altitude</span><b id="m-alt">—</b></div>
+          <div class="kv"><span>Inclination</span><b id="m-inc">—</b></div>
+          <div class="kv"><span>Period</span><b id="m-period">—</b></div>
+          <div class="kv"><span>Eccentricity</span><b id="m-ecc">—</b></div>
+          <div class="kv"><span>TLE epoch age</span><b id="m-age">—</b></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Coverage · next 24 h</div>
+        <div class="panel-body">
+          <div class="chart-caption"><span>Elevation · next 6 h</span><span>mask <b id="m-mask">—</b></span></div>
+          <svg class="mini-chart" id="chart-el"></svg>
+          <div class="kv"><span>Passes</span><b id="m-passes">—</b></div>
+          <div class="kv"><span>Contact time</span><b id="m-contact">—</b></div>
+          <div class="kv"><span>Footprint radius</span><b id="m-fp">—</b></div>
+          <div class="kv"><span>Orbital velocity</span><b id="m-vel">—</b></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Ground station <small id="gs-name"></small></div>
+        <div class="panel-body">
+          <div class="kv"><span>Az / El</span><b id="gs-azel">—</b></div>
+          <div class="kv"><span>Geometry</span><b id="gs-state">—</b></div>
+          <div class="kv"><span>Next AOS</span><b id="gs-next">—</b></div>
+          <div class="kv"><span>Next max elevation</span><b id="gs-nextel">—</b></div>
+          <p class="note">Geometric visibility above the elevation mask. It does not guarantee an RF link.</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict'
+  const O = Orbit, $ = (id) => document.getElementById(id)
+  O.mountHeader($('hdr'), 'Orbital Tracking')
+  O.mountBridgeBadge($('bridge'))
+
+  const globe = O.createGlobe($('globe'), { handoff: true, frame: document.querySelector('.viewport-card') })
+  globe.focusStation(O.activeStation())
+
+  let nextPasses = [], passesFor = '', wasVisible = null
+
+  function renderSatList() {
+    const list = O.satellites(), active = O.activeSat()
+    $('sat-count').textContent = list.length
+    $('sat-list').innerHTML = list.map((s) => {
+      if (!s.ok) return '<div class="obj" style="cursor:default"><span class="swatch" style="background:#dc4747"></span><span><b>' + O.esc(s.name) + '</b><span class="sub">invalid TLE</span></span><span></span></div>'
+      const age = O.epochAgeDays(s, O.clock.t)
+      const tag = s.reference ? '<span class="tag tag-ref" title="Reference TLE, not an operational element set">REF TLE</span>' : age > 14 ? '<span class="tag tag-ref" title="TLE epoch older than 14 days">STALE</span>' : '<span class="tag tag-live">TLE</span>'
+      return '<button class="obj' + (active && s.id === active.id ? ' selected' : '') + '" data-id="' + s.id + '"><span class="swatch" style="background:' + s.color + '"></span><span><b>' + O.esc(s.name) + '</b><span class="sub">LEO · ' + Math.round(s.a - O.RE) + ' km · ' + s.incDeg.toFixed(1) + '°</span></span>' + tag + '</button>'
+    }).join('')
+    $('sat-list').querySelectorAll('[data-id]').forEach((b) => b.onclick = () => { O.setActiveSat(b.dataset.id) })
+  }
+
+  function renderTLE() {
+    const s = O.activeSat()
+    if (!s) return
+    $('tle-name').textContent = s.name
+    $('tle-input').value = s.tle.join('\n')
+  }
+
+  $('tle-apply').onclick = () => {
+    const s = O.activeSat(), st = $('tle-status')
+    const lines = $('tle-input').value.split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim())
+    const [l1, l2] = lines.length >= 3 ? [lines[1], lines[2]] : lines
+    try {
+      const p = O.updateSatelliteTLE(s.id, l1, l2)
+      const age = O.epochAgeDays(p, O.clock.t)
+      const warn = p.warnings.slice()
+      if (Math.abs(age) > 14) warn.push('epoch is ' + Math.round(age) + ' days from scene time')
+      st.className = 'status-msg ' + (warn.length ? 'warn' : 'ok')
+      st.textContent = '✓ NORAD ' + p.norad + ' · ' + Math.round(p.a - O.RE) + ' km · i=' + p.incDeg.toFixed(2) + '°' + (warn.length ? ' · ' + warn.join('; ') : '')
+      log('TLE applied — NORAD ' + p.norad)
+    } catch (e) { st.className = 'status-msg err'; st.textContent = e.message }
+  }
+
+  function minimap() {
+    const st = O.activeStation(), el = $('mini-map')
+    const f = (st.lon + 180) / 360, g = (90 - st.lat) / 180
+    el.style.backgroundImage = "url('/orbit-textures/earth-day.jpg')"
+    el.style.backgroundSize = '900% 900%'
+    el.style.backgroundPosition = ((9 * f - 0.5) / 8 * 100) + '% ' + ((9 * g - 0.5) / 8 * 100) + '%'
+    $('mini-name').textContent = st.name
+    $('gs-name').textContent = st.name
+  }
+
+  function log(text) {
+    const line = document.createElement('div')
+    line.textContent = '[' + O.utcTime(O.clock.t) + '] ' + text
+    const el = $('event-log')
+    el.prepend(line)
+    while (el.children.length > 4) el.lastChild.remove()
+  }
+
+  function slowRefresh(ms) {
+    const s = O.activeSat(), st = O.activeStation()
+    if (!s) return
+    // altitude over one revolution
+    const T = s.periodMin * 60000, alts = []
+    for (let k = 0; k <= 60; k++) alts.push(O.state(s, null, ms + (T * k) / 60).altitude)
+    O.sparkline($('chart-alt'), alts, { color: '#0284c7' })
+    $('alt-range').textContent = Math.round(Math.min(...alts)) + '–' + Math.round(Math.max(...alts)) + ' km'
+    const els = []
+    for (let k = 0; k <= 72; k++) els.push(O.look(st, O.ecefAt(s, ms + k * 300000)).el)
+    O.sparkline($('chart-el'), els, { color: '#16a34a', refLine: st.mask })
+    $('m-alt').textContent = Math.round(s.a - O.RE) + ' km'
+    $('m-inc').textContent = s.incDeg.toFixed(2) + '°'
+    $('m-period').textContent = s.periodMin.toFixed(1) + ' min'
+    $('m-ecc').textContent = s.e.toFixed(5)
+    $('m-age').textContent = O.epochAgeDays(s, ms).toFixed(1) + ' d'
+    $('m-mask').textContent = st.mask + '°'
+    const key = s.id + s.tle.join() + st.id + st.mask + Math.floor(ms / 600000)
+    if (key !== passesFor) {
+      passesFor = key
+      nextPasses = O.predictPasses(s, st, ms, ms + 86400000, 30)
+    }
+    const contact = nextPasses.reduce((a, p) => a + p.duration, 0)
+    $('m-passes').textContent = nextPasses.length
+    $('m-contact').textContent = Math.round(contact / 60) + ' min'
+    $('m-fp').textContent = Math.round(O.footprintKm(s, st.mask)) + ' km'
+    $('m-vel').textContent = O.state(s, null, ms).velocity.toFixed(2) + ' km/s'
+  }
+
+  function hud(ms) {
+    const s = O.activeSat(), st = O.activeStation()
+    if (!s) return
+    const x = O.state(s, st, ms), vis = x.visible === 1
+    $('hud-name').textContent = s.name
+    $('hud-state').textContent = vis ? 'IN VIEW' : 'BELOW MASK'
+    $('hud-state').style.color = vis ? '#16a34a' : '#94a3b8'
+    $('hud-el').textContent = x.elevation.toFixed(1) + '°'
+    $('hud-az').textContent = x.azimuth.toFixed(1) + '°'
+    $('hud-range').textContent = Math.round(x.range) + ' km'
+    $('hud-ll').textContent = x.latitude.toFixed(1) + '° / ' + x.longitude.toFixed(1) + '°'
+    $('hud-alt').textContent = Math.round(x.altitude) + ' km'
+    $('gs-azel').textContent = x.azimuth.toFixed(0) + '° / ' + x.elevation.toFixed(0) + '°'
+    $('gs-state').textContent = vis ? 'IN VIEW' : 'BELOW MASK'
+    $('gs-state').style.color = vis ? '#16a34a' : ''
+    const nxt = nextPasses.find((p) => p.los > ms)
+    if (nxt && nxt.aos <= ms) { $('gs-next').textContent = 'now · LOS ' + O.relTime(nxt.los, ms) }
+    else $('gs-next').textContent = nxt ? O.relTime(nxt.aos, ms) : 'none in 24 h'
+    $('gs-nextel').textContent = nxt ? nxt.maxEl.toFixed(1) + '°' : '—'
+    if (wasVisible !== null && vis !== wasVisible) log(vis ? 'AOS ' + s.name + ' — el ' + x.elevation.toFixed(1) + '°' : 'LOS ' + s.name)
+    wasVisible = vis
+    $('view-title').textContent = 'Orbital view · ' + s.name
+  }
+
+  // camera + dock
+  document.querySelectorAll('[data-cam]').forEach((b) => b.onclick = () => {
+    const c = b.dataset.cam
+    if (c === 'reset') goCam(false)
+    else globe.rotate(c === 'left' ? -0.22 : c === 'right' ? 0.22 : 0, c === 'up' ? -0.14 : c === 'down' ? 0.14 : 0)
+  })
+  let gridOn = true, labelsOn = true
+  $('btn-grid').onclick = () => { gridOn = !gridOn; globe.setGrid(gridOn); $('btn-grid').classList.toggle('on', gridOn) }
+  $('btn-labels').onclick = () => { labelsOn = !labelsOn; globe.setLabels(labelsOn); $('btn-labels').classList.toggle('on', labelsOn) }
+  function setCam(close) {
+    if (close) globe.setChase(O.activeSat().id)
+    else { globe.reset(); globe.focusStation(O.activeStation()) }
+    $('btn-close').classList.toggle('on', close)
+    $('btn-global').classList.toggle('on', !close)
+    $('view-sub').textContent = close ? 'Close view · drag to orbit, wheel to zoom' : 'Global view · Kepler + J2 estimate'
+  }
+  // panels step aside, the camera flies to the new framing, panels return
+  const goCam = (close) => O.stage([[() => setCam(close), 2900]])
+  $('btn-close').onclick = () => goCam(true)
+  $('btn-global').onclick = () => goCam(false)
+  $('btn-full').onclick = () => { const sh = document.querySelector('.shell'); document.fullscreenElement ? document.exitFullscreen() : sh.requestFullscreen && sh.requestFullscreen() }
+
+  let lastSlow = -Infinity, lastHud = -Infinity
+  O.mountTimePanel($('time'), { onJump: () => { lastSlow = -Infinity; wasVisible = null } })
+  O.onCatalog(() => { renderSatList(); renderTLE(); minimap(); lastSlow = -Infinity; passesFor = ''; wasVisible = null })
+  renderSatList(); renderTLE(); minimap()
+  // arrival: fly in from deep space, then show the panels
+  O.stage([[() => { if (O.activeSat()) setCam(true) }, 3100]], 0)
+  log('Propagator ready — ' + (O.activeSat() ? O.activeSat().name : 'no valid satellite'))
+
+  O.loop((ms) => {
+    const s = O.activeSat(), st = O.activeStation()
+    if (!s) return
+    if (globe.chasing() && globe.chasing() !== s.id) globe.setChase(s.id)
+    globe.update(ms, { focus: s.id, station: st.id, linkStations: [st.id], only: [s.id] })
+    const now = performance.now()
+    if (now - lastHud > 200) { lastHud = now; hud(ms); O.updateHeaderClock(ms) }
+    if (now - lastSlow > 15000) { lastSlow = now; slowRefresh(ms) }
+  })
+})()
+</script>
+</body></html>

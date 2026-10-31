@@ -30,14 +30,20 @@ Qué SÍ hace:
     página de configuración).
   - Reintenta la conexión serie sola si el puerto no está disponible o se cae.
 
+Recepción/transmisión SDR (LimeSDR/RTL-SDR): controlada por `reception.driver`
+en satellite_config.yaml (mcu|limesdr|rtlsdr), leído una sola vez al arrancar
+(cambiar de driver requiere reiniciar el proceso). Con `mcu` se usa UART como
+siempre; con `limesdr`/`rtlsdr` se lanza el backend C (intisat_sdr) vía
+Core/SDR/sdr_backend_client.py y los paquetes decodificados (AX.25, vía
+Core/SDR/ax25_decode.py) se enrutan al mismo on_packet() que usa UART. TX solo
+es real con LimeSDR (RTL-SDR es hardware RX-only); con `mcu` el scheduler
+transmite por UART como siempre.
+
 Qué NO hace todavía (fuera de alcance de esta entrega):
-  - Recepción SDR/RF: ese path vive acoplado a la visualización del
-    espectro en GUI/pages/comms.py; falta extraerlo a un módulo
-    compartido antes de poder correrlo sin GUI.
   - Telemetría OBC real completa (pkt_type 0xA0/0xA1): su decodificador
     también vive en GUI/pages/comms.py (CommsPage._decode_obc_full_tlm).
-  - El scheduler no prende/apaga el puerto serie en sí (la recepción sigue
-    siempre activa) — solo dispara comandos de transmisión.
+  - El scheduler no prende/apaga el puerto serie/SDR en sí (la recepción
+    sigue siempre activa) — solo dispara comandos de transmisión.
 """
 
 import argparse
@@ -54,6 +60,9 @@ from Core.uart_receiver import UartReceiver
 from Core.SDR.telemetry_assembler import TelemetryAssembler
 from Core.SDR.image_assembler import ImageAssembler
 from Core.SDR.burst_image_assembler import BurstImageAssembler
+from Core.SDR.sdr_backend_client import SDRBackendClient, SDRConfig
+from Core.SDR.limesdr_tx import LimeSDRTransmitter
+from Core.SDR.ax25_decode import decode_ax25_packet, try_bitslip_correction, LOOPBACK_CALLSIGNS
 from Core.telemetry_publisher import TelemetryPublisher
 from Core.mcu_commands import McuCommandDispatcher
 
@@ -102,6 +111,22 @@ def load_satellite_id(path: str = DEFAULT_SATELLITE_CONFIG_PATH) -> str:
         return data.get("satellite", {}).get("id", "")
     except FileNotFoundError:
         return ""
+
+
+def load_reception_config(path: str = DEFAULT_SATELLITE_CONFIG_PATH) -> dict:
+    """Lee la sección `reception:` de satellite_config.yaml. Se lee una sola
+    vez al arrancar -- cambiar el driver requiere reiniciar el proceso."""
+    defaults = {
+        "driver": "mcu", "method": "uart8a", "modulation": "2FSK",
+        "frequency_mhz": 437.5, "gain_db": 40.0,
+    }
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        defaults.update(data.get("reception") or {})
+    except FileNotFoundError:
+        pass
+    return defaults
 
 
 class ScheduleRunner:
@@ -224,9 +249,12 @@ def main():
     reconnect_s = cfg["reconnect_interval_s"]
     images_dir = cfg["images_dir"]
     satellite_id = load_satellite_id()
+    reception_cfg = load_reception_config()
+    driver = str(reception_cfg.get("driver", "mcu")).lower()
+    use_sdr = driver in ("limesdr", "rtlsdr")
 
     print(f"[headless] Puertos disponibles: {UartReceiver.available_ports() or '(ninguno detectado)'}")
-    print(f"[headless] Satelite: {satellite_id or '(sin configurar)'}")
+    print(f"[headless] Satelite: {satellite_id or '(sin configurar)'}  driver={driver}")
 
     app = QCoreApplication(sys.argv)
 
@@ -245,14 +273,63 @@ def main():
         publisher.publish_log(msg)
 
     uart = UartReceiver()
+    sdr_controller = None
+    limesdr_tx = None
+
+    if use_sdr:
+        sdr_config = SDRConfig(
+            center_freq_hz=float(reception_cfg.get("frequency_mhz", 437.5)) * 1e6,
+            rf_gain_db=float(reception_cfg.get("gain_db", 40.0)),
+            modulation_type=str(reception_cfg.get("modulation", "2FSK")),
+            # sync_word/symbol_rate/freq_deviation/packet_length: se dejan en
+            # los defaults de SDRConfig (mismos valores que Core/SDR/limesdr_tx.py
+            # usa para TX) -- reception.sync_word en el YAML es el valor de
+            # registro Si4463, no el mismo formato on-air que espera SDRConfig.
+        )
+        sdr_controller = SDRBackendClient(sdr_config)
+        try:
+            sdr_controller.start(device_type=driver)
+        except Exception as e:
+            print(f"[headless] ERROR: no se pudo iniciar el backend SDR ({driver}): {e}")
+            sys.exit(1)
+        _log(f"[headless] Backend SDR iniciado: {driver} @ {sdr_config.center_freq_hz/1e6:.4f} MHz")
+
+        limesdr_tx = LimeSDRTransmitter()
+        if limesdr_tx.open(sdr_controller):
+            _log("[headless] LimeSDR TX listo")
+        else:
+            limesdr_tx = None
+            _log("[headless] AVISO: TX no disponible (RTL-SDR es solo RX, o el backend no arrancó)")
+
+    def _tx_unavailable(*_a, **_kw):
+        _log("[headless] AVISO: comando ignorado -- no hay transporte TX disponible (driver="
+             f"{driver})")
+
+    def _limesdr_send_byte(cmd_byte):
+        if not limesdr_tx.send_command(cmd_byte):
+            _log(f"[headless] AVISO: fallo el burst TX para comando 0x{cmd_byte:02X}")
+
+    def _limesdr_send_payload(cmd_byte, payload):
+        if not limesdr_tx.send_command(cmd_byte, payload):
+            _log(f"[headless] AVISO: fallo el burst TX para comando 0x{cmd_byte:02X} ({len(payload)}B payload)")
+
+    if driver == "mcu":
+        tx_send_byte = uart.send_command
+        tx_send_payload = uart.send_command_with_payload
+    elif limesdr_tx is not None:
+        tx_send_byte = _limesdr_send_byte
+        tx_send_payload = _limesdr_send_payload
+    else:
+        tx_send_byte = _tx_unavailable
+        tx_send_payload = _tx_unavailable
 
     dispatcher = McuCommandDispatcher(
-        send_byte=uart.send_command,
-        send_payload=uart.send_command_with_payload,
+        send_byte=tx_send_byte,
+        send_payload=tx_send_payload,
         log=_log,
     )
 
-    def on_packet(pkt_type: int, data: bytes):
+    def on_packet(pkt_type: int, data: bytes, source: str = "mcu"):
         name = PKT_TYPE_NAMES.get(pkt_type, f"0x{pkt_type:02X}")
         decoded = True
         error = ""
@@ -268,23 +345,24 @@ def main():
             decoded = False
             error = "pkt_type sin manejar"
         publisher.publish_message(
-            pkt_type=pkt_type, pkt_type_name=name, source="mcu",
+            pkt_type=pkt_type, pkt_type_name=name, source=source,
             decoded=decoded, error=error, size_bytes=len(data),
         )
 
     def on_burst_command_requested(pkt_type: int, payload: bytes):
-        # Mismo criterio que main_window.py::_on_burst_command_requested
-        # para el camino UART: el MCU espera el ACK/NACK/COMPLETE de vuelta.
+        # Mismo criterio que main_window.py::_on_burst_command_requested:
+        # el MCU/satelite espera el ACK/NACK/COMPLETE de vuelta.
         if payload:
-            uart.send_command_with_payload(pkt_type, payload)
+            tx_send_payload(pkt_type, payload)
         else:
-            uart.send_command(pkt_type)
+            tx_send_byte(pkt_type)
 
-    uart.packet_received.connect(on_packet)
-    uart.connected.connect(lambda p: _log(f"[headless] Conectado a {p} @ {baud} baud"))
-    uart.disconnected.connect(lambda: _log("[headless] Puerto desconectado"))
-    uart.status_message.connect(lambda msg: _log(f"[MCU] {msg}"))
-    uart.log_message.connect(_log)
+    if not use_sdr:
+        uart.packet_received.connect(on_packet)
+        uart.connected.connect(lambda p: _log(f"[headless] Conectado a {p} @ {baud} baud"))
+        uart.disconnected.connect(lambda: _log("[headless] Puerto desconectado"))
+        uart.status_message.connect(lambda msg: _log(f"[MCU] {msg}"))
+        uart.log_message.connect(_log)
 
     telem_assembler.telemetry_ready.connect(lambda v: publisher.publish_sim(v))
 
@@ -298,12 +376,45 @@ def main():
     burst_assembler.log_message.connect(_log)
     burst_assembler.command_requested.connect(on_burst_command_requested)
 
-    # Reconexión automática: revisa cada N segundos y reintenta si hace falta.
-    reconnect_timer = QTimer()
-    reconnect_timer.setInterval(reconnect_s * 1000)
-    reconnect_timer.timeout.connect(lambda: None if uart.is_connected() else uart.connect(port, baud))
-    reconnect_timer.start()
-    uart.connect(port, baud)  # primer intento inmediato
+    if not use_sdr:
+        # Reconexión automática: revisa cada N segundos y reintenta si hace falta.
+        reconnect_timer = QTimer()
+        reconnect_timer.setInterval(reconnect_s * 1000)
+        reconnect_timer.timeout.connect(lambda: None if uart.is_connected() else uart.connect(port, baud))
+        reconnect_timer.start()
+        uart.connect(port, baud)  # primer intento inmediato
+    else:
+        # Polling no-bloqueante de paquetes/errores del backend SDR (mismo
+        # patrón que GUI/pages/comms.py::_poll_sdr_frame, sin la parte de
+        # consola/FFT/waterfall -- solo lo necesario para alimentar on_packet).
+        def on_sdr_poll():
+            for pkt in sdr_controller.poll_packets():
+                decoded = decode_ax25_packet(pkt.raw_bytes)
+                if decoded and decoded['src_call'] in LOOPBACK_CALLSIGNS:
+                    continue  # nuestro propio TX burst, no es recepción real
+                if decoded and decoded['crc_valid']:
+                    on_packet(decoded['pkt_type'], decoded['data'], source="sdr")
+                    continue
+                if decoded:
+                    corrected, _shift = try_bitslip_correction(pkt.raw_bytes)
+                    if corrected:
+                        on_packet(corrected['pkt_type'], corrected['data'], source="sdr")
+                        continue
+                publisher.publish_message(
+                    pkt_type=0,
+                    pkt_type_name="CRC_FAIL" if decoded else "FALSE_SYNC",
+                    source="sdr", decoded=False,
+                    error="crc_invalid" if decoded else "no_ax25_flag",
+                    size_bytes=len(pkt.raw_bytes),
+                )
+            err = sdr_controller.poll_error()
+            if err:
+                _log(f"[SDR] {err}")
+
+        sdr_poll_timer = QTimer()
+        sdr_poll_timer.setInterval(50)
+        sdr_poll_timer.timeout.connect(on_sdr_poll)
+        sdr_poll_timer.start()
 
     # Scheduler: relee headless_receiver.yaml cada 2s y dispara comandos
     # programados desde la pagina de configuracion de la web.
@@ -321,7 +432,13 @@ def main():
 
     def shutdown(*_):
         print("\n[headless] Cerrando...")
-        uart.disconnect()
+        if use_sdr:
+            if limesdr_tx is not None:
+                limesdr_tx.close()
+            if sdr_controller is not None:
+                sdr_controller.stop()
+        else:
+            uart.disconnect()
         publisher.close()
         app.quit()
 

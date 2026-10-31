@@ -12,6 +12,10 @@ venv/
 node_modules/
 webapp/frontend/dist/
 
+# intisat_sdr C build output — compilado localmente por plataforma
+# (.exe/.dll de Windows, binarios de Linux), no se versiona
+intisat_sdr/build/
+
 # Imagenes de payload recibidas — datos de runtime, no subir
 /images/
 
@@ -24,3 +28,6 @@ webapp/frontend/dist/
 *.swp
 *.swo
 .DS_Store
+
+# Perfiles de navegador de las capturas de verificacion (cookies/sesiones, ~87 MB)
+docs/frontend-verification/browser-profile*/

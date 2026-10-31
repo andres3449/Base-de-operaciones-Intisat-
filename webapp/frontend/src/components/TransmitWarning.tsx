@@ -21,9 +21,8 @@ export function TransmitWarning({ schedule, driver }: { schedule: ScheduleRespon
   if (driver !== 'rtlsdr' || !hasScheduled) return null
   return (
     <div className="warning-banner">
-      ⚠ El driver activo es RTL-SDR (solo recepción) y hay comandos programados — no se van a
-      poder ejecutar porque RTL-SDR no puede transmitir. Cambiá el driver en “Satélite y
-      recepción” (Configuración) o quitá los comandos programados.
+      ⚠ RTL-SDR is receive-only. Scheduled commands cannot transmit through this driver.
+      Select a transmit-capable receiver in Settings or disable the commands.
     </div>
   )
 }

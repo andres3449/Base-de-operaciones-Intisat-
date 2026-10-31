@@ -1,0 +1,341 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTISAT — Free View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="/orbit-ui/orbit.css">
+<script src="/orbit-ui/orbit-core.js"></script>
+<style>
+:root{--left-w:200px;--right-w:290px}
+.free-wrap{flex:1;min-height:0}
+.free-wrap .viewport-card{height:100%}
+.chart-box{position:relative;flex:1;min-height:0}
+.chart-box svg{position:absolute;inset:14px 4px 14px 30px;width:calc(100% - 34px);height:calc(100% - 28px)}
+.chart-box .lab{position:absolute;font:8px 'JetBrains Mono',monospace;color:#7a8c9e;white-space:nowrap}
+.mini-table{width:100%;border-collapse:collapse;font:9px 'JetBrains Mono',monospace}
+.mini-table td,.mini-table th{padding:2px 4px;border-bottom:1px solid #eef1f5;text-align:left;white-space:nowrap}
+.mini-table th{font-size:8px;color:#5d7083;text-transform:uppercase}
+</style>
+</head><body class="space ui-away">
+<div class="shell">
+  <header id="hdr"></header>
+  <div class="grid-layout">
+    <aside class="left-col">
+      <div class="panel">
+        <div class="panel-header">Add panel <small id="w-count"></small></div>
+        <div class="panel-body tool-grid" id="tools"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Layout</div>
+        <div class="panel-body" style="display:grid;gap:4px">
+          <button class="btn block" id="lock">🔓 LOCK LAYOUT</button>
+          <button class="btn block danger" id="reset-layout">RESET TO DEFAULT</button>
+          <p class="note">Drag a panel header to move it and the lower-right corner to resize it. Layout is saved in this browser.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Variables</div>
+        <div class="panel-body">
+          <div id="var-ref"></div>
+          <p class="note">Operators <b>+ − * / ^</b> · functions <b>abs sqrt sin cos tan log exp min max</b> · constant <b>pi</b>. Trigonometry in radians. Units are not checked.</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="center-col">
+      <div class="free-wrap">
+        <div class="viewport-card">
+          <div class="viewport-title"><span>Free view · orbital panels</span><small>values evaluated at scene time</small></div>
+          <div class="board" id="board"></div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="right-col">
+      <div class="panel">
+        <div class="panel-header">Panel configuration <small id="cfg-id"></small></div>
+        <div class="panel-body" id="cfg"><div class="empty">Select a panel on the board.</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Scene time</div>
+        <div class="panel-body" id="time"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict'
+  const O = Orbit, $ = (id) => document.getElementById(id)
+  O.mountHeader($('hdr'), 'Free View')
+  const KEY = 'intisat-orbit-free-v1', MAX = 12
+  const TYPES = { metric: 'Metric', gauge: 'Gauge', chart: 'Chart', status: 'Status', table: 'Pass table', globe: 'Globe' }
+  const AGG = { instant: 'Instant', mean: 'Mean', min: 'Minimum', max: 'Maximum', delta: 'Delta (end − start)', integral: 'Integral (·s)' }
+
+  const DEFAULTS = () => [
+    { type: 'globe', title: 'Orbit', x: 0, y: 0, w: 49, h: 61 },
+    { type: 'metric', title: 'Elevation', expr: 'elevation', unit: '°', x: 50, y: 0, w: 24.5, h: 30 },
+    { type: 'gauge', title: 'Altitude', expr: 'altitude', unit: 'km', min: 400, max: 700, x: 75.5, y: 0, w: 24.5, h: 30 },
+    { type: 'status', title: 'Station access', expr: 'visible', x: 50, y: 31, w: 24.5, h: 30 },
+    { type: 'metric', title: 'One-way light time', expr: 'range / 299792.458 * 1000', unit: 'ms', x: 75.5, y: 31, w: 24.5, h: 30 },
+    { type: 'chart', title: 'Elevation · next 2 h', expr: 'elevation', unit: '°', span: 120, step: 60, x: 0, y: 62, w: 59, h: 38 },
+    { type: 'table', title: 'Upcoming passes', x: 60, y: 62, w: 40, h: 38 },
+  ].map(norm)
+
+  function norm(w) {
+    return Object.assign({ id: 'w' + Math.random().toString(36).slice(2, 8), title: TYPES[w.type], sat: '', station: '', expr: 'elevation', unit: '', min: 0, max: 90, offset: 0, span: 60, step: 60, agg: 'instant', x: 5, y: 5, w: 30, h: 30 }, w)
+  }
+  let state
+  try { state = JSON.parse(localStorage.getItem(KEY) || 'null') } catch { state = null }
+  if (!state || !Array.isArray(state.widgets)) state = { widgets: DEFAULTS(), locked: false }
+  state.widgets = state.widgets.slice(0, MAX).map(norm)
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)) } catch { /* not persisted */ } }
+
+  let selectedId = null
+  const compiled = new Map(), globes = new Map(), tables = new Map()
+
+  function fnFor(expr) {
+    if (!compiled.has(expr)) { try { compiled.set(expr, { fn: O.compileExpr(expr) }) } catch (e) { compiled.set(expr, { error: e.message }) } }
+    return compiled.get(expr)
+  }
+  const satOf = (w) => O.satById(w.sat) || O.activeSat()
+  const stOf = (w) => O.stationById(w.station) || O.activeStation()
+
+  function evaluate(w, ms) {
+    const c = fnFor(w.expr)
+    if (c.error) return { error: c.error }
+    const s = satOf(w), st = stOf(w)
+    if (!s) return { error: 'No valid satellite.' }
+    const at = (t) => { const v = c.fn(O.state(s, st, t)); return Number.isFinite(v) ? v : NaN }
+    const t0 = ms + w.offset * 60000
+    if (w.agg === 'instant' || w.type === 'status') return { value: at(t0) }
+    const span = Math.max(1, w.span) * 60000
+    let step = Math.max(1, w.step) * 1000
+    if (span / step > 1500) step = span / 1500
+    const vals = []
+    for (let t = t0; t <= t0 + span + 1; t += step) vals.push(at(t))
+    const f = vals.filter(Number.isFinite)
+    if (!f.length) return { value: NaN }
+    let value
+    if (w.agg === 'mean') value = f.reduce((a, b) => a + b, 0) / f.length
+    else if (w.agg === 'min') value = Math.min(...f)
+    else if (w.agg === 'max') value = Math.max(...f)
+    else if (w.agg === 'delta') value = f[f.length - 1] - f[0]
+    else if (w.agg === 'integral') { value = 0; for (let k = 1; k < vals.length; k++) if (Number.isFinite(vals[k]) && Number.isFinite(vals[k - 1])) value += (vals[k] + vals[k - 1]) / 2 * (step / 1000) }
+    return { value }
+  }
+
+  function fmt(v) {
+    if (!Number.isFinite(v)) return '—'
+    const a = Math.abs(v)
+    return a >= 10000 ? v.toFixed(0) : a >= 100 ? v.toFixed(1) : a >= 1 ? v.toFixed(2) : v.toFixed(4)
+  }
+
+  /* board */
+  const board = $('board')
+  function renderBoard() {
+    for (const [id, g] of globes) if (!state.widgets.find((w) => w.id === id && w.type === 'globe')) { g.dispose(); globes.delete(id) }
+    board.classList.toggle('locked', state.locked)
+    board.innerHTML = ''
+    for (const w of state.widgets) {
+      const el = document.createElement('section')
+      el.className = 'widget' + (w.id === selectedId ? ' selected' : '')
+      el.dataset.id = w.id
+      el.style.cssText = 'left:' + w.x + '%;top:' + w.y + '%;width:' + w.w + '%;height:' + w.h + '%'
+      el.innerHTML = '<div class="widget-head"><b>' + O.esc(w.title || TYPES[w.type]) + '</b><span class="chip">' + w.type + '</span><button class="x" title="Remove panel">×</button></div><div class="widget-body' + (w.type === 'globe' ? ' flush' : '') + '"></div><div class="resize" title="Resize"></div>'
+      board.appendChild(el)
+      el.addEventListener('pointerdown', () => select(w.id))
+      el.querySelector('.x').onclick = (e) => { e.stopPropagation(); removeWidget(w.id) }
+      el.querySelector('.widget-head').addEventListener('pointerdown', (e) => startDrag(e, w, el, false))
+      el.querySelector('.resize').addEventListener('pointerdown', (e) => startDrag(e, w, el, true))
+      if (w.type === 'globe') {
+        const host = document.createElement('div')
+        host.className = 'globe'
+        host.style.top = '0'
+        el.querySelector('.widget-body').appendChild(host)
+        const old = globes.get(w.id)
+        if (old) old.dispose()
+        const g = O.createGlobe(host, { stars: false, distance: 23000, intro: false })
+        g.focusStation(stOf(w))
+        globes.set(w.id, g)
+      }
+    }
+    $('w-count').textContent = state.widgets.length + ' / ' + MAX
+    renderTools()
+    refreshBodies(O.clock.t, true)
+  }
+
+  function startDrag(e, w, el, resize) {
+    if (state.locked || e.button !== 0 || (!resize && e.target.closest('button'))) return
+    e.preventDefault(); e.stopPropagation()
+    select(w.id)
+    const r = board.getBoundingClientRect(), sx = e.clientX, sy = e.clientY, o = { x: w.x, y: w.y, w: w.w, h: w.h }
+    const target = e.currentTarget
+    target.setPointerCapture(e.pointerId)
+    const move = (ev) => {
+      const dx = (ev.clientX - sx) / r.width * 100, dy = (ev.clientY - sy) / r.height * 100
+      if (resize) { w.w = clamp(o.w + dx, 12, 100 - o.x); w.h = clamp(o.h + dy, 15, 100 - o.y) }
+      else { w.x = clamp(o.x + dx, 0, 100 - o.w); w.y = clamp(o.y + dy, 0, 100 - o.h) }
+      el.style.left = w.x + '%'; el.style.top = w.y + '%'; el.style.width = w.w + '%'; el.style.height = w.h + '%'
+    }
+    const up = () => { target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', up); target.removeEventListener('pointercancel', up); w.x = +w.x.toFixed(1); w.y = +w.y.toFixed(1); w.w = +w.w.toFixed(1); w.h = +w.h.toFixed(1); save() }
+    target.addEventListener('pointermove', move)
+    target.addEventListener('pointerup', up)
+    target.addEventListener('pointercancel', up)
+  }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+
+  function select(id) {
+    if (selectedId === id) return
+    selectedId = id
+    board.querySelectorAll('.widget').forEach((el) => el.classList.toggle('selected', el.dataset.id === id))
+    renderConfig()
+  }
+
+  function refreshBodies(ms, force) {
+    for (const w of state.widgets) {
+      if (w.type === 'globe') continue
+      const body = board.querySelector('[data-id="' + w.id + '"] .widget-body')
+      if (!body) continue
+      if (w.type === 'table') { renderTable(w, body, ms, force); continue }
+      const r = w.type === 'chart' ? null : evaluate(w, ms)
+      if (r && r.error) { body.innerHTML = '<div class="w-error">' + O.esc(r.error) + '</div>'; continue }
+      const s = satOf(w), st = stOf(w), cap = O.esc((s ? s.name : '—') + ' → ' + (st ? st.name.split('·').pop().trim() : '—') + (w.agg !== 'instant' && w.type !== 'status' && w.type !== 'chart' ? ' · ' + AGG[w.agg].toLowerCase() + ' ' + w.span + ' min' : ''))
+      if (w.type === 'metric') body.innerHTML = '<div class="w-metric">' + fmt(r.value) + '<small>' + O.esc(w.unit) + '</small></div><div class="w-caption">' + cap + '</div>'
+      else if (w.type === 'gauge') {
+        const f = Number.isFinite(r.value) && w.max > w.min ? clamp((r.value - w.min) / (w.max - w.min), 0, 1) : 0
+        const a = Math.PI * (1 - f), ex = 50 + 40 * Math.cos(a), ey = 52 - 40 * Math.sin(a)
+        body.innerHTML = '<svg viewBox="0 0 100 62" style="width:100%;flex:1;min-height:0"><path d="M10 52 A40 40 0 0 1 90 52" fill="none" stroke="#e2e8f0" stroke-width="8" stroke-linecap="round"/>' +
+          (f > 0 ? '<path d="M10 52 A40 40 0 0 1 ' + ex.toFixed(2) + ' ' + ey.toFixed(2) + '" fill="none" stroke="#168ca5" stroke-width="8" stroke-linecap="round"/>' : '') +
+          '<text x="50" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="13" font-weight="700" fill="#0f172a">' + fmt(r.value) + '</text><text x="50" y="58" text-anchor="middle" font-size="6" fill="#7a8c9e">' + O.esc(w.unit) + '</text>' +
+          '<text x="10" y="61" text-anchor="middle" font-size="5" fill="#94a3b8">' + w.min + '</text><text x="90" y="61" text-anchor="middle" font-size="5" fill="#94a3b8">' + w.max + '</text></svg><div class="w-caption">' + cap + '</div>'
+      } else if (w.type === 'status') {
+        const on = Number.isFinite(r.value) && r.value > 0.5
+        const isVis = w.expr.trim() === 'visible'
+        body.innerHTML = '<div class="w-status"><span class="lamp' + (on ? ' on' : '') + '"></span><b style="color:' + (on ? '#16a34a' : '#64748b') + '">' + (isVis ? (on ? 'IN VIEW' : 'BELOW MASK') : (on ? 'TRUE' : 'FALSE')) + '</b><div class="w-caption">' + cap + '</div></div>'
+      } else if (w.type === 'chart') renderChart(w, body, ms, cap)
+    }
+  }
+
+  function renderChart(w, body, ms, cap) {
+    const c = fnFor(w.expr)
+    if (c.error) { body.innerHTML = '<div class="w-error">' + O.esc(c.error) + '</div>'; return }
+    const s = satOf(w), st = stOf(w)
+    if (!s) { body.innerHTML = '<div class="w-error">No valid satellite.</div>'; return }
+    const t0 = ms + w.offset * 60000, span = Math.max(1, w.span) * 60000
+    let step = Math.max(1, w.step) * 1000
+    if (span / step > 1500) step = span / 1500
+    const vals = []
+    for (let t = t0; t <= t0 + span + 1; t += step) { const v = c.fn(O.state(s, st, t)); vals.push(Number.isFinite(v) ? v : NaN) }
+    const f = vals.filter(Number.isFinite)
+    let min = f.length ? Math.min(...f) : 0, max = f.length ? Math.max(...f) : 1
+    if (min === max) { min -= 1; max += 1 }
+    const n = vals.length - 1
+    let d = '', open = false
+    vals.forEach((v, k) => { if (Number.isFinite(v)) { d += (open ? ' L' : ' M') + (k / n * 300).toFixed(1) + ',' + (100 - (v - min) / (max - min) * 100).toFixed(1); open = true } else open = false })
+    body.innerHTML = '<div class="chart-box"><svg viewBox="0 0 300 100" preserveAspectRatio="none"><path d="M0 0H300M0 50H300M0 100H300" stroke="#eef1f5" stroke-width="1" vector-effect="non-scaling-stroke"/><path d="' + d + '" fill="none" stroke="#0284c7" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>' +
+      '<span class="lab" style="left:2px;top:10px">' + fmt(max) + '</span><span class="lab" style="left:2px;bottom:10px">' + fmt(min) + '</span>' +
+      '<span class="lab" style="left:30px;bottom:0">' + O.utcHM(t0) + '</span><span class="lab" style="right:4px;bottom:0">' + O.utcHM(t0 + span) + '</span><span class="lab" style="right:4px;top:0">' + O.esc(w.unit) + '</span></div><div class="w-caption">' + cap + '</div>'
+  }
+
+  function renderTable(w, body, ms, force) {
+    const s = satOf(w), st = stOf(w)
+    if (!s || !st) { body.innerHTML = '<div class="w-error">No valid pair.</div>'; return }
+    const key = s.id + s.tle.join() + st.id + st.mask + Math.floor(ms / 300000)
+    let t = tables.get(w.id)
+    if (!t || t.key !== key) { t = { key, passes: O.predictPasses(s, st, ms, ms + 86400000, 30) }; tables.set(w.id, t) }
+    else if (!force && t.rendered === Math.floor(ms / 1000)) return
+    t.rendered = Math.floor(ms / 1000)
+    const up = t.passes.filter((p) => p.los > ms).slice(0, 8)
+    body.style.justifyContent = 'flex-start'
+    body.innerHTML = '<table class="mini-table"><tr><th>AOS</th><th>In</th><th>Dur</th><th>Max</th></tr>' + (up.map((p) => '<tr><td>' + O.utcHM(p.aos) + '</td><td>' + (p.aos <= ms ? 'now' : O.relTime(p.aos, ms).replace('in ', '')) + '</td><td>' + O.dur(p.duration) + '</td><td class="' + O.elClass(p.maxEl) + '">' + p.maxEl.toFixed(0) + '°</td></tr>').join('') || '<tr><td colspan="4">No passes in 24 h</td></tr>') + '</table><div class="w-caption" style="margin-top:auto">' + O.esc(s.name + ' → ' + st.name.split('·').pop().trim()) + '</div>'
+  }
+
+  /* tools / config */
+  function renderTools() {
+    const hasGlobe = state.widgets.some((w) => w.type === 'globe'), full = state.widgets.length >= MAX
+    $('tools').innerHTML = Object.entries(TYPES).map(([t, label]) => '<button class="btn" data-add="' + t + '"' + (full || (t === 'globe' && hasGlobe) ? ' disabled' : '') + '>+ ' + label + '</button>').join('')
+    $('tools').querySelectorAll('[data-add]').forEach((b) => b.onclick = () => addWidget(b.dataset.add))
+    $('lock').textContent = state.locked ? '🔒 UNLOCK LAYOUT' : '🔓 LOCK LAYOUT'
+    $('lock').classList.toggle('on', state.locked)
+  }
+  function addWidget(type) {
+    if (state.widgets.length >= MAX) return
+    const n = state.widgets.length
+    const w = norm({ type, x: Math.min(60, 4 + n * 3), y: Math.min(60, 4 + n * 3), w: type === 'globe' ? 40 : 28, h: type === 'globe' ? 50 : 30, expr: type === 'status' ? 'visible' : 'elevation', unit: type === 'status' ? '' : '°', span: type === 'chart' ? 120 : 60 })
+    state.widgets.push(w)
+    selectedId = w.id
+    save(); renderBoard(); renderConfig()
+  }
+  function removeWidget(id) {
+    state.widgets = state.widgets.filter((w) => w.id !== id)
+    if (selectedId === id) selectedId = null
+    save(); renderBoard(); renderConfig()
+  }
+
+  function renderConfig() {
+    const w = state.widgets.find((x) => x.id === selectedId)
+    $('cfg-id').textContent = w ? w.type : ''
+    if (!w) { $('cfg').innerHTML = '<div class="empty">Select a panel on the board.</div>'; return }
+    const opt = (list, cur, label) => '<option value="">' + label + '</option>' + list.map((x) => '<option value="' + x.id + '"' + (x.id === cur ? ' selected' : '') + '>' + O.esc(x.name) + '</option>').join('')
+    const usesExpr = !['table', 'globe'].includes(w.type)
+    $('cfg').innerHTML =
+      '<label class="field">Title<input id="c-title" value="' + O.esc(w.title) + '"></label>' +
+      '<label class="field">Type<select id="c-type">' + Object.entries(TYPES).map(([t, l]) => '<option value="' + t + '"' + (t === w.type ? ' selected' : '') + ((t === 'globe' && w.type !== 'globe' && state.widgets.some((x) => x.type === 'globe')) ? ' disabled' : '') + '>' + l + '</option>').join('') + '</select></label>' +
+      '<div class="field-row2"><label class="field">Satellite<select id="c-sat">' + opt(O.validSatellites(), w.sat, 'Active satellite') + '</select></label><label class="field">Station<select id="c-st">' + opt(O.stations(), w.station, 'Active station') + '</select></label></div>' +
+      (usesExpr ? '<label class="field">Variable or formula<input id="c-expr" class="mono" value="' + O.esc(w.expr) + '" spellcheck="false"></label><div class="chip-row" id="c-chips">' + Object.keys(O.VARIABLES).map((v) => '<button data-v="' + v + '">' + v + '</button>').join('') + '</div>' +
+        '<div class="field-row3"><label class="field">Unit<input id="c-unit" value="' + O.esc(w.unit) + '"></label><label class="field">Min<input id="c-min" type="number" step="any" value="' + w.min + '"></label><label class="field">Max<input id="c-max" type="number" step="any" value="' + w.max + '"></label></div>' +
+        '<div class="field-row3"><label class="field">Offset min<input id="c-off" type="number" step="any" value="' + w.offset + '"></label><label class="field">Span min<input id="c-span" type="number" min="1" step="any" value="' + w.span + '"></label><label class="field">Step s<input id="c-step" type="number" min="1" step="any" value="' + w.step + '"></label></div>' +
+        '<label class="field">Aggregation<select id="c-agg">' + Object.entries(AGG).map(([k, l]) => '<option value="' + k + '"' + (k === w.agg ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' : '') +
+      '<div class="status-msg" id="c-status"></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:6px"><button class="btn primary" id="c-apply">APPLY</button><button class="btn" id="c-dup">DUPLICATE</button><button class="btn danger" id="c-del">DELETE</button></div>' +
+      '<p class="note">Min / max are used by the gauge. Offset and span define the evaluation window relative to scene time; the chart plots it, other panels aggregate it.</p>'
+    const chips = $('c-chips')
+    if (chips) chips.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { const i = $('c-expr'); const p = i.selectionStart ?? i.value.length; i.value = i.value.slice(0, p) + b.dataset.v + i.value.slice(i.selectionEnd ?? p); i.focus() })
+    $('c-apply').onclick = () => {
+      const st = $('c-status')
+      const next = Object.assign({}, w, { title: $('c-title').value.trim() || TYPES[$('c-type').value], type: $('c-type').value, sat: $('c-sat').value, station: $('c-st').value })
+      if ($('c-expr')) {
+        Object.assign(next, { expr: $('c-expr').value.trim(), unit: $('c-unit').value.trim(), min: +$('c-min').value, max: +$('c-max').value, offset: +$('c-off').value, span: +$('c-span').value, step: +$('c-step').value, agg: $('c-agg').value })
+        if (!['table', 'globe'].includes(next.type)) {
+          try { O.compileExpr(next.expr) } catch (e) { st.className = 'status-msg err'; st.textContent = e.message; return }
+        }
+        if (![next.min, next.max, next.offset, next.span, next.step].every(Number.isFinite) || next.span <= 0 || next.step <= 0) { st.className = 'status-msg err'; st.textContent = 'Min, max, offset, span and step must be numbers; span and step must be positive.'; return }
+        if (next.type === 'gauge' && next.max <= next.min) { st.className = 'status-msg err'; st.textContent = 'Gauge maximum must exceed the minimum.'; return }
+      }
+      if (next.type === 'globe' && w.type !== 'globe' && state.widgets.some((x) => x.type === 'globe')) { st.className = 'status-msg err'; st.textContent = 'Only one globe panel is allowed.'; return }
+      Object.assign(w, next)
+      save(); renderBoard(); renderConfig()
+      $('c-status').className = 'status-msg ok'; $('c-status').textContent = '✓ Applied'
+    }
+    $('c-dup').onclick = () => {
+      if (state.widgets.length >= MAX || w.type === 'globe') return
+      const copy = norm(Object.assign({}, w, { id: undefined, x: clamp(w.x + 3, 0, 100 - w.w), y: clamp(w.y + 3, 0, 100 - w.h) }))
+      delete copy.id; copy.id = 'w' + Math.random().toString(36).slice(2, 8)
+      state.widgets.push(copy); selectedId = copy.id; save(); renderBoard(); renderConfig()
+    }
+    $('c-del').onclick = () => removeWidget(w.id)
+  }
+
+  $('lock').onclick = () => { state.locked = !state.locked; save(); renderBoard() }
+  $('reset-layout').onclick = () => { if (!confirm('Replace the current panels with the default layout?')) return; state = { widgets: DEFAULTS(), locked: false }; selectedId = null; save(); renderBoard(); renderConfig() }
+  $('var-ref').innerHTML = Object.entries(O.VARIABLES).map(([k, u]) => '<div class="kv"><span class="mono">' + k + '</span><b>' + u + '</b></div>').join('')
+
+  O.mountTimePanel($('time'))
+  O.onCatalog(() => { tables.clear(); renderBoard(); renderConfig() })
+  renderBoard()
+
+  let last = 0
+  O.stage([[() => {}, 500]], 120)
+  O.loop((ms) => {
+    for (const w of state.widgets) {
+      if (w.type !== 'globe') continue
+      const g = globes.get(w.id), s = satOf(w), st = stOf(w)
+      if (g && s) g.update(ms, { focus: s.id, station: st.id, linkStations: [st.id], only: w.sat ? [s.id] : undefined, hidden: O.getCatalog().hidden })
+    }
+    const now = performance.now()
+    if (now - last > 500) { last = now; O.updateHeaderClock(ms); refreshBodies(ms, false) }
+  })
+})()
+</script>
+</body></html>

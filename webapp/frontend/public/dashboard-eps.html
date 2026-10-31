@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>INTISAT-1 | EPS / Thermal</title>
+<style>
+:root{--bg:#eaf4f9;--card:#fff;--text:#081744;--muted:#5371b0;--line:#e6edf6;--blue:#008dff;--inset:#fbfdff;--green:#00bc7d}*{box-sizing:border-box}body{margin:0;font:14px 'Segoe UI',Arial,sans-serif;color:var(--text);background:var(--bg)}button,select{font:inherit;cursor:pointer}button:focus-visible,select:focus-visible{outline:3px solid #70bfff;outline-offset:2px}button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:5px;padding:8px 13px}button:hover{filter:brightness(.97)}.app{display:grid;grid-template-columns:245px minmax(0,1fr);min-height:calc(100vh - 54px)}aside{background:var(--card);border-right:1px solid var(--line)}.brand{height:64px;display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}.logo{background:var(--blue);box-shadow:0 3px 7px #008dff45;color:white;border-radius:8px;padding:10px;font-weight:600}.brand strong{font-size:18px}.brand small{display:block;color:var(--muted);font-size:12px;margin-top:3px}.navtitle{font-size:12px;color:#6a84c3;font-weight:600;margin:24px 18px 13px}.navitem{padding:11px 14px;margin:3px 12px;display:flex;gap:14px;align-items:center;color:var(--muted);border-radius:6px}.navitem.active{background:linear-gradient(110deg,#009bff,#007be4);color:white;font-weight:600}.navitem span{width:18px;text-align:center;font-size:18px}.navbottom{border-top:1px solid var(--line);margin-top:20px}main{padding:7px 12px 12px;display:flex;flex-direction:column;gap:12px;min-width:0}.topbar,.card{background:var(--card);border:1px solid #f5f9fc;border-radius:7px;box-shadow:0 3px 9px #50799809}.topbar{display:flex;align-items:center;gap:16px;padding:13px 15px;min-height:47px}.topbar strong{font-size:17px;white-space:nowrap}.subtitle{color:var(--muted);border-left:1px solid #bdcce7;padding-left:16px}.badge{margin-left:auto;background:#e7f5ff;color:#007bff;border:1px solid #cdeaff;font-size:11px;padding:7px 12px;border-radius:4px;white-space:nowrap}.row{display:grid;gap:12px;min-width:0}.top{grid-template-columns:1fr .95fr 1.03fr;flex:1}.middle{grid-template-columns:30% minmax(0,1fr);flex:1.2}.bottom{grid-template-columns:1fr 1fr;flex:.85}.card{padding:13px 12px;min-width:0;display:flex;flex-direction:column}h2{font-size:14px;margin:0 0 13px;display:flex;align-items:center;gap:10px;line-height:20px}h2:before{content:'';display:block;width:5px;height:17px;border-radius:3px;background:#0099ff;flex-shrink:0}.top h2:before{display:none}.icon{font-size:22px;color:#0099ff}.orange{color:#ff9c00}.metrics{display:grid;gap:5px;flex:1}.metric{border:1px solid var(--line);border-radius:5px;background:var(--inset);display:flex;align-items:center;gap:9px;padding:7px 10px;min-height:30px;color:var(--muted);font-size:12px}.value{margin-left:auto;color:var(--text);font-family:Consolas,monospace;font-size:12px;white-space:nowrap}.off{background:#ffe4eb;color:#fa1845;text-align:center;width:42%;padding:4px;border-radius:4px;margin-left:auto;font-family:Consolas,monospace}.on{background:#dff8ee;color:#00915f;text-align:center;width:42%;padding:4px;border-radius:4px;margin-left:auto;font-family:Consolas,monospace}.cpu .metric{padding:16px 10px;gap:15px}.cpu label{width:38%;flex-shrink:0}.track{height:9px;background:var(--line);border-radius:5px;flex:1;overflow:hidden}.fill{display:block;height:100%;background:#05aaf3;border-radius:5px}.donutwrap{display:flex;align-items:center;justify-content:space-around;gap:20px;flex:1}.donut{width:min(51%,220px);aspect-ratio:1;border-radius:50%;position:relative;flex-shrink:0}.donut:after{content:'';position:absolute;inset:28%;background:var(--card);border-radius:50%}.donutcenter{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:1;font:600 24px Consolas,monospace}.donutcenter small{font:12px 'Segoe UI',sans-serif;color:var(--muted);margin-top:4px}.legend{display:grid;gap:14px;min-width:115px;flex:1;max-width:170px}.legend div{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}.dot{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);flex-shrink:0}.legend b{margin-left:auto;color:var(--text);font-family:Consolas,monospace}.charthead{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}.charthead h2{margin-right:auto}.key{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;border:1px solid var(--line);padding:4px 6px;border-radius:4px}.key .dot{width:7px;height:7px;border-radius:50%}.chart{flex:1;min-height:170px;width:100%;position:relative}.middle .chart{min-height:232px}canvas{position:absolute;width:100%;height:100%;inset:0}
+
+html,body{width:100%;height:100%;overflow:hidden}
+#screen{position:fixed;width:1600px;height:820px;transform-origin:top left;overflow:hidden}
+.app{height:766px;min-height:0;grid-template-columns:220px minmax(0,1fr)}
+main{display:grid;grid-template-rows:47px 230px 240px minmax(0,1fr);gap:12px;min-height:0}
+.row,.card,.metrics{min-height:0}
+.metric{padding:4px 9px;min-height:24px}
+.cpu .metric{padding:12px 10px}
+.chart,.middle .chart{min-height:0}
+.donut{max-width:175px}.donutwrap{gap:15px}.legend{gap:12px;min-width:110px}
+h2{font-size:13px;margin-bottom:10px}
+
+/* Embedded workspace */
+aside,.topbar,.footer{display:none!important}.app{display:block!important;height:100%!important;min-height:0!important}main{height:100%!important;padding:0!important}#screen{left:0!important;top:0!important}
+main{grid-template-rows:220px 200px minmax(0,1fr) auto!important}
+.donutwrap{min-height:0;gap:14px}.donut{width:140px;height:140px;max-width:42%;flex-shrink:1}.donutcenter{font-size:21px}.legend{gap:8px;min-width:100px}.legend div{line-height:15px;font-size:11px}
+
+/* INTISAT visual system · refined light */
+:root{--bg:#f2f5f8;--card:#ffffff;--text:#24374b;--muted:#708195;--line:#e1e7ee;--border:#e1e7ee;--blue:#2879bb;--inset:#f8fafc;--green:#23866d}
+body{font-family:'Segoe UI',Arial,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;letter-spacing:.03px}
+.card{border:1px solid #dde5ed!important;border-radius:9px!important;box-shadow:0 2px 6px #233b5205,0 8px 20px #233b5203!important}
+h2{font-weight:600!important;letter-spacing:.25px}
+button{border-color:#dce4ec;border-radius:5px}
+.metric{border-color:#e2e8ef!important;background:#f9fbfd!important;border-radius:5px!important}.metric label{color:#74859a!important;letter-spacing:.25px}.value{color:#273e54}
+.track{background:#e9eef4}
+h2:before{background:#478bb9;width:3px;border-radius:2px}.icon{opacity:.7}.off{background:#faedf0;color:#b36b7c}.on{background:#eaf6f0;color:#2f8a63}
+</style></head><body><div id="screen"><div class="app"><main>
+<div class="row top">
+  <section class="card"><h2><span class="icon orange">ϟ</span>POWER DISTRIBUTION (EPS)</h2><div class="metrics" id="eps"></div></section>
+  <section class="card"><h2><span class="icon">♧</span>THERMAL CONTROL (TCS)</h2><div class="metrics" id="thermal"></div></section>
+  <section class="card cpu"><h2><span class="icon">▦</span>ON-BOARD COMPUTER</h2><div class="metrics" id="cpu"></div></section>
+</div>
+<div class="row middle">
+  <section class="card"><h2>POWER CONSUMPTION SHARE</h2><div class="donutwrap"><div class="donut" id="donut" role="img" aria-label="Real-time subsystem power share"><div class="donutcenter" id="donutcenter">— W<small>TOTAL</small></div></div><div class="legend" id="legend"></div></div></section>
+  <section class="card"><div class="charthead"><h2>CONSUMPTION HISTORY</h2><span class="key"><i class="dot" style="--c:#008dff"></i>OBC+ADCS+Comms+TCS (W)</span></div><div class="chart"><canvas id="power" role="img" aria-label="Real subsystem power history"></canvas></div></section>
+</div>
+<div class="row bottom">
+  <section class="card"><div class="charthead"><h2>BATTERY DRAIN</h2><span class="key"><i class="dot" style="--c:#008dff"></i>Battery Voltage (V)</span><span class="key"><i class="dot" style="--c:#ff9e00"></i>Battery Current (A)</span></div><div class="chart"><canvas id="battery" role="img" aria-label="Real battery voltage and current"></canvas></div></section>
+  <section class="card"><div class="charthead"><h2>THERMAL HISTORY</h2><span class="key"><i class="dot" style="--c:#ff9e00"></i>OBC Temperature (°C)</span><span class="key"><i class="dot" style="--c:#ff304d"></i>Battery Temperature (°C)</span></div><div class="chart"><canvas id="heat" role="img" aria-label="Real subsystem temperatures"></canvas></div></section>
+</div>
+<section class="card" style="padding:7px 10px"><h2 style="margin-bottom:5px;font-size:11px">SOLAR PANEL TELEMETRY</h2><div id="solar" style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px"></div></section>
+</main></div></div>
+<script src="/dashboard-common.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+function fitScreen(){let k=Math.min(innerWidth/1350,innerHeight/740),e=document.getElementById('screen');e.style.width=innerWidth/k+'px';e.style.height=innerHeight/k+'px';e.style.transform='scale('+k+')';e.style.left='0';e.style.top='0'}
+fitScreen();window.addEventListener('resize',fitScreen);
+
+const PWR = [
+  { key: 'OBC', ch: 'sim.eps_pwr_obc', color: '#008dff' },
+  { key: 'ADCS', ch: 'sim.eps_pwr_adcs', color: '#8d30f5' },
+  { key: 'Comms', ch: 'sim.eps_pwr_comms', color: '#ff9e00' },
+  { key: 'TCS', ch: 'sim.eps_pwr_tcs', color: '#13c77b' },
+]
+
+async function refresh() {
+  const m = await IntisatDash.latest()
+  const f = (ch, unit, dec) => IntisatDash.fmt(m, ch, unit, dec)
+
+  $('eps').innerHTML = [
+    ['Battery Voltage', f('sim.eps_batt_voltage', 'V', 2)],
+    ['Battery Current', f('sim.eps_batt_current', 'A', 2)],
+    ['Battery SOC', f('sim.eps_batt_soc', '%', 0)],
+    ['Bus Voltage', f('sim.eps_bus_voltage', 'V', 2)],
+    ['Bus Current', f('sim.eps_bus_current', 'A', 2)],
+  ].map(([a, b]) => `<div class="metric"><label>${a}</label><span class="value">${b}</span></div>`).join('')
+
+  const heaterA = m['sim.tcs_heater_current']
+  const heaterOn = heaterA !== undefined && heaterA > 0.01
+  $('thermal').innerHTML = `<div class="metric"><label>Heater Status</label><span class="${heaterOn ? 'on' : 'off'}">${heaterA === undefined ? '— —' : heaterOn ? 'ON' : 'OFF'}</span></div>` +
+    [
+      ['Heater Current', f('sim.tcs_heater_current', 'A', 2)],
+      ['OBC Temperature', f('sim.obc_temp', '°C', 1)],
+    ].map(([a, b]) => `<div class="metric"><label>${a}</label><span class="value">${b}</span></div>`).join('')
+
+  $('cpu').innerHTML = [
+    ['CPU Load', 'sim.obc_cpu_load'],
+    ['RAM Usage', 'sim.obc_ram_usage'],
+    ['Filesystem Usage', 'sim.obc_fs_usage'],
+  ].map(([a, ch]) => {
+    const v = m[ch]
+    return `<div class="metric"><label>${a}</label><div class="track"><span class="fill" style="width:${v ?? 0}%"></span></div><span class="value">${v === undefined ? '— —' : v.toFixed(0)} %</span></div>`
+  }).join('')
+
+  const values = PWR.map((p) => m[p.ch])
+  const total = values.reduce((s, v) => s + (v ?? 0), 0)
+  let cursor = 0
+  const stops = []
+  for (let i = 0; i < PWR.length; i++) {
+    const v = values[i] ?? 0
+    const frac = total > 0 ? v / total : 0
+    const next = cursor + frac * 100
+    stops.push(`${PWR[i].color} ${cursor}% ${next}%`)
+    cursor = next
+  }
+  $('donut').style.background = total > 0 ? `conic-gradient(${stops.join(',')})` : 'var(--line)'
+  $('donutcenter').innerHTML = `${total.toFixed(1)} W<small>TOTAL</small>`
+  $('legend').innerHTML = PWR.map((p, i) => {
+    const v = values[i]
+    const pct = total > 0 && v !== undefined ? ((v / total) * 100).toFixed(0) : '—'
+    return `<div><i class="dot" style="--c:${p.color}"></i>${p.key}<b>${pct}${pct !== '—' ? '%' : ''}</b></div>`
+  }).join('')
+
+  $('solar').innerHTML = Array.from({ length: 6 }, (_, i) => i + 1).map((n) => {
+    const v = f(`sim.eps_solar_voltage_${n}`, 'V', 2)
+    const a = f(`sim.eps_solar_current_${n}`, 'A', 2)
+    const t = f(`sim.tcs_panel_temp_${n}`, '°C', 1)
+    return `<div style="font:10px Consolas,monospace;border-left:2px solid #ffac35;padding-left:8px"><b>P${n}</b> · ${v}<br>${a} · ${t}</div>`
+  }).join('')
+}
+
+async function drawCharts() {
+  const [obc, adcs, comms, tcs, battV, battI, obcTemp, battTemp] = await Promise.all([
+    IntisatDash.history('sim.eps_pwr_obc', 30),
+    IntisatDash.history('sim.eps_pwr_adcs', 30),
+    IntisatDash.history('sim.eps_pwr_comms', 30),
+    IntisatDash.history('sim.eps_pwr_tcs', 30),
+    IntisatDash.history('sim.eps_batt_voltage', 30),
+    IntisatDash.history('sim.eps_batt_current', 30),
+    IntisatDash.history('sim.obc_temp', 30),
+    IntisatDash.history('sim.eps_batt_temp', 30),
+  ])
+  const sumSeries = (lists) => {
+    if (!lists[0] || !lists[0].length) return []
+    return lists[0].map((p, i) => ({ ts: p.ts, value: lists.reduce((s, l) => s + (l[i]?.value ?? 0), 0) }))
+  }
+  IntisatDash.drawChart('power', [{ points: sumSeries([obc, adcs, comms, tcs]).map((p) => ({ ts: p.ts, value: p.value })), color: '#008dff' }], 'Time', 'Power (W)')
+  IntisatDash.drawChart('battery', [
+    { points: battV.map((p) => ({ ts: p.ts, value: p.value })), color: '#008dff' },
+  ], 'Time', 'Voltage (V)')
+  IntisatDash.drawChart('heat', [
+    { points: obcTemp.map((p) => ({ ts: p.ts, value: p.value })), color: '#ff9e00' },
+    { points: battTemp.map((p) => ({ ts: p.ts, value: p.value })), color: '#ff304d' },
+  ], 'Time', 'Temperature (°C)')
+}
+
+refresh()
+drawCharts()
+setInterval(refresh, 2000)
+setInterval(drawCharts, 15000)
+new ResizeObserver(drawCharts).observe(document.querySelector('main'))
+</script>
+</body></html>

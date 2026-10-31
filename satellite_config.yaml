@@ -2,7 +2,7 @@ satellite:
   id: INTISAT-1
   name: INTISAT
 reception:
-  driver: mcu
+  driver: rtlsdr
   method: uart8a
   modulation: GFSK
   frequency_mhz: 437.5

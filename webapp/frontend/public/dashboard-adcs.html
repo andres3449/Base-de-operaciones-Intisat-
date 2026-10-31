@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>INTISAT-1 | ADCS</title>
+<style>
+:root{--bg:#eaf4f9;--card:#fff;--text:#081744;--muted:#5371b0;--line:#e6edf6;--blue:#008dff;--inset:#fbfdff;--green:#00bc7d}*{box-sizing:border-box}body{margin:0;font:14px 'Segoe UI',Arial,sans-serif;color:var(--text);background:var(--bg)}button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:5px;padding:8px 13px}button:hover{filter:brightness(.97)}button:focus-visible{outline:3px solid #70bfff;outline-offset:2px}main{padding:7px 12px 12px;display:flex;flex-direction:column;gap:12px;min-width:0;height:100%}.card{background:var(--card);border:1px solid #f5f9fc;border-radius:7px;box-shadow:0 3px 9px #50799809;padding:13px 12px;min-width:0;display:flex;flex-direction:column}h2{font-size:14px;margin:0 0 13px;display:flex;align-items:center;gap:10px;line-height:20px}h2:before{content:'';display:block;width:5px;height:17px;border-radius:3px;background:#0099ff;flex-shrink:0}.icon{font-size:22px;color:#0099ff}.row{display:grid;gap:12px;min-width:0}.top{grid-template-columns:1fr 1fr 1fr}.metrics{display:grid;gap:5px;flex:1}.metric{border:1px solid var(--line);border-radius:5px;background:var(--inset);display:flex;align-items:center;gap:9px;padding:7px 10px;min-height:30px;color:var(--muted);font-size:12px}.value{margin-left:auto;color:var(--text);font-family:Consolas,monospace;font-size:12px;white-space:nowrap}
+.adcs-bottom{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:12px;min-height:0;flex:1}
+.visual{position:relative;min-height:0;background:radial-gradient(ellipse at 50% 65%,#172f4c,#071324 75%);border-radius:5px;flex:1;overflow:hidden;touch-action:none}
+.visual canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}.visual canvas:active{cursor:grabbing}
+.viewbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}.viewbar h2{margin:0 auto 0 0}.viewbar button{font-size:11px;padding:5px 9px}
+.hud{position:absolute;left:12px;top:12px;color:#aecae9;background:#061222c9;padding:7px 10px;border:1px solid #294461;border-radius:4px;font:11px Consolas,monospace;pointer-events:none}
+.hint{position:absolute;bottom:12px;left:12px;color:#8eacd0;font-size:11px;pointer-events:none}
+.sidecards{display:grid;grid-template-rows:170px minmax(0,1fr) 91px;gap:12px;min-height:0}
+.vector .metric{padding:6px 9px}.vector .value{color:#007dce}
+.axiskeys{display:flex;gap:14px;color:#adc5e3;font:11px Consolas,monospace;position:absolute;right:12px;bottom:12px}
+.statusline{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;padding:7px 0}.statusline b{font:12px Consolas,monospace;color:var(--text)}
+.footnote{font-size:10px;color:var(--muted)}
+.chart{flex:1;min-height:0;width:100%;position:relative}canvas.chartcv{position:absolute;inset:0;width:100%;height:100%}
+.selected{color:var(--blue);border-color:#76bbff;background:#eff9ff}
+
+/* INTISAT visual system · refined light */
+:root{--bg:#f2f5f8;--card:#ffffff;--text:#24374b;--muted:#708195;--line:#e1e7ee;--border:#e1e7ee;--blue:#2879bb;--inset:#f8fafc;--green:#23866d}
+body{font-family:'Segoe UI',Arial,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;letter-spacing:.03px}
+.card{border:1px solid #dde5ed!important;border-radius:9px!important;box-shadow:0 2px 6px #233b5205,0 8px 20px #233b5203!important}
+h2{font-weight:600!important;letter-spacing:.25px}
+.metric{border-color:#e2e8ef!important;background:#f9fbfd!important;border-radius:5px!important}.metric label{color:#74859a!important;letter-spacing:.25px}.value{color:#273e54}
+h2:before{background:#478bb9;width:3px;border-radius:2px}.icon{opacity:.7}.viewbar button{border-color:#e0e7ee;color:#67829a}
+</style></head><body><main>
+<div class="row top">
+  <section class="card"><h2><span class="icon">◎</span>ADCS SENSORS</h2><div class="metrics" id="sensors"></div></section>
+  <section class="card"><h2><span class="icon">⚙</span>ADCS ACTUATORS</h2><div class="metrics" id="actuators"></div></section>
+  <section class="card"><h2><span class="icon">⊕</span>ATTITUDE STATE</h2><div class="metrics" id="attitude"></div></section>
+</div>
+<div class="adcs-bottom">
+  <section class="card">
+    <div class="viewbar"><h2>3D ATTITUDE VIEW · CUBESAT 3U</h2><button id="wire" aria-pressed="false">Wireframe</button><button id="rotate" aria-pressed="false">Auto rotate</button><button id="center">Center</button></div>
+    <div class="visual" id="visual"><canvas id="satellite" aria-label="Interactive illustrative CubeSat model. Drag to rotate, scroll to zoom." role="img"></canvas><div class="hud" id="hud">MODEL PREVIEW</div><div class="hint">Drag to orbit · Scroll to zoom</div><div class="axiskeys"><span style="color:#ff6479">X · Roll</span><span style="color:#2bd8a0">Y · Pitch</span><span style="color:#49acff">Z · Yaw</span></div></div>
+  </section>
+  <div class="sidecards">
+    <section class="card vector"><h2>DIRECTIONAL VECTORS</h2><div class="metrics" id="vectors"></div></section>
+    <section class="card"><h2>ORBITAL ALTITUDE</h2><div class="chart"><canvas class="chartcv" id="altitude" role="img" aria-label="Orbital altitude chart, awaiting telemetry"></canvas></div></section>
+    <section class="card"><h2>TELEMETRY STATUS</h2><div class="statusline"><span>ADCS link</span><b id="linkstate">NO DATA</b></div><div class="footnote">Model orientation is illustrative unless live attitude data is available.</div></section>
+  </div>
+</div>
+</main>
+<script src="/dashboard-common.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+function metrics(id,rows){$(id).innerHTML=rows.map(([label,value])=>`<div class="metric"><label>${label}</label><span class="value">${value}</span></div>`).join('')}
+const vec3=(m,x,y,z,dec=2)=>{const a=m[x],b=m[y],c=m[z];return (a===undefined||b===undefined||c===undefined)?'[ —, —, — ]':`[ ${a.toFixed(dec)}, ${b.toFixed(dec)}, ${c.toFixed(dec)} ]`}
+const sc=(m,ch,unit,dec=2)=>IntisatDash.fmt(m,ch,unit,dec)
+
+async function refresh(){
+  const m = await IntisatDash.latest()
+  metrics('sensors',[
+    ['Magnetometer (µT)', vec3(m,'sim.adcs_mag_x','sim.adcs_mag_y','sim.adcs_mag_z')],
+    ['Gyroscope (deg/s)', vec3(m,'sim.adcs_gyro_x','sim.adcs_gyro_y','sim.adcs_gyro_z')],
+    ['Accelerometer (m/s²)', vec3(m,'sim.adcs_accel_x','sim.adcs_accel_y','sim.adcs_accel_z',3)],
+    ['Sun Angle', sc(m,'sim.adcs_sun_angle','°',1)],
+    ['Sun Intensity / Face', '— —'],
+    ['Star Tracker', '— —'],
+  ]);
+  metrics('actuators',[
+    ['Magnetorquer (mA)', sc(m,'sim.adcs_mtq_current','mA',1)],
+    ['Reaction Wheels (RPM)', m['sim.adcs_rw_speed_1']===undefined?'[ —, —, — ]':`[ ${m['sim.adcs_rw_speed_1'].toFixed(0)}, ${(m['sim.adcs_rw_speed_2']??0).toFixed(0)}, ${(m['sim.adcs_rw_speed_3']??0).toFixed(0)} ]`],
+    ['RW Torque (mN·m)', sc(m,'sim.adcs_rw_torque','',4)],
+    ['ADCS Mode', '— —'],
+  ]);
+  metrics('attitude',[
+    ['Quaternion', m['sim.adcs_quat_w']===undefined?'[ —, —, —, — ]':`[ ${m['sim.adcs_quat_w'].toFixed(3)}, ${m['sim.adcs_quat_x'].toFixed(3)}, ${m['sim.adcs_quat_y'].toFixed(3)}, ${m['sim.adcs_quat_z'].toFixed(3)} ]`],
+    ['Angular Velocity (deg/s)', vec3(m,'sim.adcs_ang_vel_x','sim.adcs_ang_vel_y','sim.adcs_ang_vel_z',3)],
+    ['Target Attitude (deg)', '[ —, —, — ]'],
+    ['Attitude Error (deg)', sc(m,'sim.adcs_attitude_error','°',2)],
+  ]);
+  metrics('vectors',[
+    ['Sun Vector','[ —, —, — ]'],['Nadir','[ —, —, — ]'],['Velocity','[ —, —, — ]'],['B-Field','[ —, —, — ]'],
+  ]);
+
+  const haveAttitude = m['sim.adcs_quat_w'] !== undefined
+  $('linkstate').textContent = haveAttitude ? 'OK' : 'NO DATA'
+  $('hud').textContent = haveAttitude ? 'LIVE ATTITUDE DATA' : 'MODEL PREVIEW · NO LIVE ATTITUDE DATA'
+
+  if (haveAttitude) {
+    const [qw,qx,qy,qz] = [m['sim.adcs_quat_w'],m['sim.adcs_quat_x'],m['sim.adcs_quat_y'],m['sim.adcs_quat_z']]
+    yaw = Math.atan2(2*(qw*qz+qx*qy), 1-2*(qy*qy+qz*qz))
+    pitch = Math.asin(Math.max(-1, Math.min(1, 2*(qw*qy-qz*qx))))
+    model()
+  }
+}
+
+function altitudeChart(){
+  const cv=$('altitude'), r=cv.parentElement, w=r.clientWidth, h=r.clientHeight, d=devicePixelRatio||1
+  cv.width=w*d; cv.height=h*d; const c=cv.getContext('2d'); c.scale(d,d); c.clearRect(0,0,w,h)
+  const L=42,R=12,T=10,B=35
+  c.font='10px Segoe UI'; c.fillStyle='#5371b0'; c.textAlign='center'
+  c.fillText('Awaiting telemetry',(w+L-R)/2,(h+T-B)/2)
+}
+
+let yaw=.65,pitch=-.22,zoom=1,wire=false,auto=false,drag=null
+function setup(id){const cv=$(id),w=cv.parentElement.clientWidth,h=cv.parentElement.clientHeight,d=devicePixelRatio||1;cv.width=w*d;cv.height=h*d;const c=cv.getContext('2d');c.scale(d,d);return {c,w,h}}
+function model(){let {c,w,h}=setup('satellite');let unit=Math.min(w/9,h/5.2)*zoom*.9;
+function rot(v){let [x,y,z]=v;let a=x*Math.cos(yaw)+z*Math.sin(yaw),b=-x*Math.sin(yaw)+z*Math.cos(yaw);return [a,y*Math.cos(pitch)-b*Math.sin(pitch),y*Math.sin(pitch)+b*Math.cos(pitch)]}
+function project(v){let [x,y,z]=rot(v),p=8/(8+z);return [w/2+x*unit*p,h*.50-y*unit*p,z]}
+function line(a,b,color,width=1){let p=project(a),q=project(b);c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(p[0],p[1]);c.lineTo(q[0],q[1]);c.stroke()}
+for(let i=-5;i<=5;i++){line([i,-1.85,-5],[i,-1.85,5],'#25425e88');line([-5,-1.85,i],[5,-1.85,i],'#25425e88')}
+const faces=[];function face(v,color,edge='#e3aa4e'){faces.push({v,color,edge,z:v.map(rot).reduce((a,b)=>a+b[2],0)/v.length})}
+function box(x0,x1,y0,y1,z0,z1,color){let v=[[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]];[[0,1,2,3],[4,7,6,5],[0,4,5,1],[3,2,6,7],[1,5,6,2],[0,3,7,4]].forEach((f,i)=>face(f.map(j=>v[j]),color[i%color.length]))}
+box(-.48,.48,-1.45,1.45,-.48,.48,['#1c3b5e','#244d71','#19324b']);
+for(let side of [-1,1]){for(let j=0;j<3;j++){let x0=side*(.53+j*.72),x1=side*(1.23+j*.72);face([[x0,-.40,-.68],[x1,-.40,-.68],[x1,-.40,.68],[x0,-.40,.68]],'#0758a3','#7288a2');for(let k=0;k<4;k++){let z0=-.64+k*.33;face([[x0+side*.04,-.39,z0],[x1-side*.04,-.39,z0],[x1-side*.04,-.39,z0+.28],[x0+side*.04,-.39,z0+.28]],k%2?'#124f8e':'#0a4380','#3981b2')}}}
+faces.sort((a,b)=>b.z-a.z).forEach(f=>{let p=f.v.map(project);c.beginPath();p.forEach((v,i)=>i?c.lineTo(v[0],v[1]):c.moveTo(v[0],v[1]));c.closePath();if(!wire){c.fillStyle=f.color;c.fill()}c.strokeStyle=f.edge;c.lineWidth=1.2;c.stroke()});
+for(let y of [-.48,.48]){line([-.48,y,-.49],[.48,y,-.49],'#d7a249',2);line([.49,y,-.48],[.49,y,.48],'#d7a249',2);line([-.48,y,.49],[.48,y,.49],'#d7a249',2)}line([0,1.45,0],[0,2.05,0],'#d6b65b',2);
+[[[1.25,0,0],'#ff6479','X'],[[0,1.9,0],'#2bd8a0','Y'],[[0,0,1.5],'#49acff','Z']].forEach(([v,col,label])=>{line([0,0,0],v,col,2);let p=project(v);c.fillStyle=col;c.font='12px Consolas';c.fillText(label,p[0]+6,p[1]-5)})}
+function draw(){model();altitudeChart()}
+new ResizeObserver(draw).observe($('visual'));addEventListener('resize',draw);
+$('satellite').onpointerdown=e=>{drag=[e.clientX,e.clientY];e.target.setPointerCapture(e.pointerId)};$('satellite').onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*.009;pitch=Math.max(-1.3,Math.min(1.3,pitch+(e.clientY-drag[1])*.009));drag=[e.clientX,e.clientY];model()};$('satellite').onpointerup=$('satellite').onpointercancel=()=>drag=null;
+$('satellite').addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.55,Math.min(1.55,zoom-e.deltaY*.001));model()},{passive:false});
+$('center').onclick=()=>{yaw=.65;pitch=-.22;zoom=1;model()};
+$('wire').onclick=()=>{wire=!wire;$('wire').classList.toggle('selected',wire);$('wire').setAttribute('aria-pressed',wire);model()};
+$('rotate').onclick=()=>{auto=!auto;$('rotate').classList.toggle('selected',auto);$('rotate').setAttribute('aria-pressed',auto)};
+let prev=0;function animate(t){if(auto&&!drag){yaw+=Math.min(t-prev,50)*.0003;model()}prev=t;requestAnimationFrame(animate)}requestAnimationFrame(animate);
+
+draw()
+refresh()
+setInterval(refresh, 2000)
+</script>
+</body></html>

@@ -1,0 +1,103 @@
+/* Dashboard · Communications — mirrors the Mission Control mockup. */
+.page.cm-page{padding:14px 18px;height:100%;min-height:0;overflow:hidden;display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;font-family:'Segoe UI',Arial,sans-serif;color:#24374b;background:#f2f5f8}
+.cm-linkbar{display:flex;align-items:center;gap:22px;background:#fff;border:1px solid #dde5ed;border-radius:8px;padding:0 14px;height:38px;font:10.5px 'JetBrains Mono',monospace;color:#5d7083;white-space:nowrap;overflow:hidden}
+.cm-linkbar strong{font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:.8px;color:#078fd7}
+.cm-linkbar b{font-weight:500;color:#263d52}
+.cm-linkbar em{margin-left:auto;font-style:normal;font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:#8090a2}
+
+.cm-main{min-height:0;display:grid;grid-template-columns:232px minmax(0,1fr) minmax(300px,.62fr);gap:10px}
+.cm-left{min-height:0;display:flex;flex-direction:column;gap:8px;overflow-y:auto;scrollbar-width:none}
+.cm-left::-webkit-scrollbar{display:none}
+.cm-left .cm-card{flex-shrink:0}
+.cm-center{min-height:0;display:grid;grid-template-rows:minmax(0,1.1fr) minmax(0,.9fr) minmax(0,1.1fr);gap:10px}
+
+.cm-card{padding:8px 10px}
+.cm-card .mo-head{font-size:11.5px;height:24px;margin-bottom:6px}
+.cm-meta{font:9.5px 'JetBrains Mono',monospace;color:#8090a2;letter-spacing:.3px}
+.cm-card small{display:block;font-size:9.5px;line-height:1.4;color:#8090a2;margin-top:3px}
+
+.cm-field{display:flex;align-items:center;gap:8px;min-height:24px;font-size:10.5px;color:#5d7083}
+.cm-field>span:first-child{flex:0 0 46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm-box{flex:1;min-width:0;background:#f8fafc;border:1px solid #e2e8ef;border-radius:4px;padding:3px 8px;font:10.5px 'JetBrains Mono',monospace;color:#263d52;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm-field+.cm-field{margin-top:3px}
+.cm-field input[type=range]{flex:1;min-width:0;accent-color:#1d7fc4}
+.cm-num{flex-shrink:0;min-width:46px;text-align:right;font:500 10px 'JetBrains Mono',monospace;color:#078fd7}
+.cm-meter{flex:1;height:5px;border-radius:3px;background:#e4ebf1;overflow:hidden}
+.cm-meter i{display:block;height:100%;background:#1d7fc4;border-radius:3px}
+
+.cm-card select{width:100%;font:10.5px 'Segoe UI',Arial,sans-serif;padding:4px 6px;border:1px solid #dce4ec;border-radius:4px;background:#f8fafc;color:#263d52}
+.cm-card select:disabled{opacity:1;cursor:default}
+.cm-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.cm-btns button{font:600 10px 'Segoe UI',Arial,sans-serif;padding:6px 0;border:0;border-radius:4px;color:#fff;cursor:pointer}
+.cm-start{background:#2f8a63}
+.cm-stop{background:#c9566b}
+.cm-btns button:disabled{opacity:.38;cursor:default}
+.cm-export{margin-left:auto;font:10px 'Segoe UI',Arial,sans-serif;padding:3px 9px;border:1px solid #dce4ec;border-radius:4px;background:#fff;color:#53718f;cursor:pointer}
+.cm-export:disabled{opacity:.5;cursor:default}
+
+/* plots */
+.cm-plot{position:relative;flex:1;min-height:0;padding:4px 10px 30px 46px}
+.cm-area{position:relative;width:100%;height:100%}
+.cm-area svg,.cm-area canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.cm-grid{stroke:#e8edf3;stroke-width:1;vector-effect:non-scaling-stroke}
+.cm-trace{fill:none;stroke:#0284c7;stroke-width:1.4;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.cm-trace-snr{stroke:#16a34a}
+.cm-mark{stroke:#e0a43a;stroke-width:1;stroke-dasharray:4 4;vector-effect:non-scaling-stroke}
+.cm-yt{position:absolute;right:calc(100% + 6px);transform:translateY(-50%);font:9.5px 'Segoe UI',Arial,sans-serif;color:#5371b0;white-space:nowrap}
+.cm-xt{position:absolute;top:calc(100% + 4px);transform:translateX(-50%);font:9.5px 'Segoe UI',Arial,sans-serif;color:#5371b0;white-space:nowrap}
+.cm-ylabel{position:absolute;left:4px;top:45%;transform:translate(-30%,-50%) rotate(-90deg);font-size:9.5px;color:#5371b0;white-space:nowrap}
+.cm-xlabel{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:9.5px;color:#5371b0;white-space:nowrap}
+.cm-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;pointer-events:none}
+.cm-wf{background:#0b1120;border-radius:2px}
+.cm-wf canvas{image-rendering:pixelated}
+.cm-hint-dark{color:#8ea3b5}
+
+/* packet console */
+.cm-console{padding:8px 0 0;background:#fff}
+.cm-console .mo-head{margin:0 10px 0}
+.cm-counters{display:flex;flex-wrap:wrap;gap:14px;padding:5px 10px 7px;font:9.5px 'JetBrains Mono',monospace;color:#8090a2}
+.cm-counters b{color:#078fd7;font-weight:500}
+.cm-log{flex:1;min-height:0;overflow:auto;background:#0f1e33;padding:12px;font:10.5px/1.65 'JetBrains Mono',monospace;color:#cfe0ee}
+.cm-log time{color:#6f8aa6}
+.cm-log .ok{color:#7ee0b0}
+.cm-log .bad{color:#f39aa8}
+.cm-log .sys{color:#38bdf8}
+.cm-dim{color:#cfe0ee}
+.cm-cmd{display:flex;align-items:center;gap:8px;background:#0c1829;border-top:1px solid #1c2d44;padding:7px 10px;border-radius:0 0 9px 9px}
+.cm-cmd b{font:600 10px 'JetBrains Mono',monospace;color:#22c58b}
+.cm-cmd input{flex:1;min-width:0;background:transparent;border:0;outline:0;font:10.5px 'JetBrains Mono',monospace;color:#dbe7f1}
+.cm-cmd input::placeholder{color:#5b7189}
+.cm-cmd button{font:600 10px 'Segoe UI',Arial,sans-serif;padding:5px 12px;border:0;border-radius:4px;background:#1d7fc4;color:#fff;cursor:pointer}
+
+@media (max-height:800px){
+  .page.cm-page{padding:9px 12px;gap:8px}
+  .cm-main,.cm-center{gap:8px}
+  .cm-left{gap:6px}
+  .cm-card{padding:6px 9px}
+  .cm-card .mo-head{height:22px;margin-bottom:4px}
+  .cm-field{min-height:21px}
+  .cm-plot{padding-bottom:26px}
+}
+@media (max-width:1100px){
+  .page.cm-page{overflow:auto;display:flex;flex-direction:column}
+  .cm-main{display:flex;flex-direction:column}
+  .cm-center>.cm-card{min-height:220px}
+  .cm-console{min-height:360px}
+}
+/* left column density: all seven cards fit without scrolling */
+.cm-left{gap:7px}
+.cm-left .cm-card{padding:6px 9px}
+.cm-left .cm-card .mo-head{height:21px;margin-bottom:4px;font-size:11px}
+.cm-left .cm-field{min-height:20px;font-size:10px}
+.cm-left .cm-field+.cm-field{margin-top:2px}
+.cm-left .cm-box{padding:2px 7px;font-size:10px}
+.cm-left .cm-card small{font-size:9px;margin-top:2px}
+.cm-btns{margin-top:5px}
+.cm-btns button{padding:5px 0}
+@media (max-height:800px){
+  .cm-left{gap:5px}
+  .cm-left .cm-card{padding:4px 8px}
+  .cm-left .cm-card .mo-head{height:19px;margin-bottom:3px}
+  .cm-left .cm-field{min-height:18px}
+  .cm-left .cm-card small{display:none}
+}

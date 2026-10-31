@@ -6,6 +6,13 @@ zmq:
   # Puente publicado por Core/telemetry_publisher.py dentro de la app PyQt5.
   endpoint: "tcp://127.0.0.1:5560"
 
+sdr:
+  # PUB del backend C (intisat_sdr.exe) -- topic FFT, independiente del
+  # puente TLM/MSG/LOG de arriba. Solo se lee para el streaming de espectro
+  # opt-in (/ws/spectrum); admite multiples SUB simultaneos sin conflicto
+  # con Core/SDR/sdr_backend_client.py.
+  fft_endpoint: "tcp://127.0.0.1:5555"
+
 clickhouse:
   # Debe coincidir con docker-compose.web.yml
   host: "127.0.0.1"

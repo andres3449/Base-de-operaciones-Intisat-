@@ -18,17 +18,22 @@ import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
-from . import clickhouse_client, config, zmq_ingest
-from .routers import auth, images, messages, satellite, schedule, status, telemetry
+from . import clickhouse_client, config, spectrum_stream, zmq_ingest
+from .routers import auth, images, messages, satellite, schedule, sdr_scan, sdr_runtime, status, telemetry
 from .ws_manager import manager
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    clickhouse_client.ensure_schema(clickhouse_client.get_client())
+    try:
+        clickhouse_client.ensure_schema(clickhouse_client.get_client())
+    except Exception as e:
+        print(f"[main] ADVERTENCIA: ClickHouse no disponible, sigue sin historial/persistencia: {e}")
     zmq_ingest.start(asyncio.get_running_loop())
+    spectrum_stream.start(asyncio.get_running_loop())
     yield
     zmq_ingest.stop()
+    spectrum_stream.stop()
 
 
 app = FastAPI(title="INTISAT Ground Station — Monitoring Room", lifespan=lifespan)
@@ -39,6 +44,8 @@ app.include_router(images.router)
 app.include_router(auth.router)
 app.include_router(satellite.router)
 app.include_router(messages.router)
+app.include_router(sdr_scan.router)
+app.include_router(sdr_runtime.router)
 
 
 @app.websocket("/ws/live")
@@ -52,6 +59,18 @@ async def ws_live(ws: WebSocket):
         pass
     finally:
         await manager.disconnect(ws)
+
+
+@app.websocket("/ws/spectrum")
+async def ws_spectrum(ws: WebSocket):
+    await spectrum_stream.manager.connect(ws)
+    try:
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await spectrum_stream.manager.disconnect(ws)
 
 
 # Serve the built React app (npm run build in webapp/frontend) if present.

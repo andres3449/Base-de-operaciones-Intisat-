@@ -15,13 +15,17 @@ interface Props {
    * `to_ts` on the given interval so charts keep sliding forward. */
   onChange: (range: TimeRange) => void
   liveRefreshMs?: number
+  /** Fewer presets, no custom-range/live-toggle UI — fits inline in a
+   * panel title row (e.g. Dashboard's Altitud & Térmica). */
+  compact?: boolean
 }
 
-export function TimeRangePicker({ onChange, liveRefreshMs = 10000 }: Props) {
+export function TimeRangePicker({ onChange, liveRefreshMs = 10000, compact = false }: Props) {
   const [presetMinutes, setPresetMinutes] = useState<number | 'custom'>(60)
   const [live, setLive] = useState(true)
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
+  const presets = compact ? PRESETS.filter((p) => [15, 60, 24 * 60].includes(p.minutes)) : PRESETS
 
   useEffect(() => {
     const compute = () => {
@@ -42,8 +46,8 @@ export function TimeRangePicker({ onChange, liveRefreshMs = 10000 }: Props) {
   }, [presetMinutes, live, customFrom, customTo, liveRefreshMs])
 
   return (
-    <div className="time-range-picker">
-      {PRESETS.map((p) => (
+    <div className={compact ? 'time-range-picker compact' : 'time-range-picker'}>
+      {presets.map((p) => (
         <button
           key={p.minutes}
           type="button"
@@ -53,15 +57,17 @@ export function TimeRangePicker({ onChange, liveRefreshMs = 10000 }: Props) {
           {p.label}
         </button>
       ))}
-      <button
-        type="button"
-        className={presetMinutes === 'custom' ? 'active' : ''}
-        onClick={() => setPresetMinutes('custom')}
-      >
-        Rango…
-      </button>
+      {!compact && (
+        <button
+          type="button"
+          className={presetMinutes === 'custom' ? 'active' : ''}
+          onClick={() => setPresetMinutes('custom')}
+        >
+          Rango…
+        </button>
+      )}
 
-      {presetMinutes === 'custom' && (
+      {!compact && presetMinutes === 'custom' && (
         <div className="time-range-custom">
           <input
             type="datetime-local"
@@ -79,7 +85,7 @@ export function TimeRangePicker({ onChange, liveRefreshMs = 10000 }: Props) {
         </div>
       )}
 
-      {presetMinutes !== 'custom' && (
+      {!compact && presetMinutes !== 'custom' && (
         <label className="time-range-live">
           <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} />
           En vivo

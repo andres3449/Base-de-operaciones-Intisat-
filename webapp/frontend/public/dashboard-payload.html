@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>INTISAT-1 | Payload</title>
+<style>
+:root{--bg:#eaf4f9;--card:#fff;--text:#081744;--muted:#5371b0;--line:#e6edf6;--blue:#008dff;--inset:#fbfdff;--green:#00bc7d}*{box-sizing:border-box}body{margin:0;font:14px 'Segoe UI',Arial,sans-serif;color:var(--text);background:var(--bg)}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #70bfff;outline-offset:2px}button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:5px;padding:8px 13px}button:hover{filter:brightness(.97)}main{padding:10px;display:flex;flex-direction:column;gap:10px;min-width:0;height:100%}.card{background:var(--card);border:1px solid #f5f9fc;border-radius:7px;box-shadow:0 3px 9px #50799809;padding:12px;min-height:0}h2{font-size:13px;margin:0;line-height:21px;display:flex;align-items:center;gap:8px}h2:before{content:'';display:block;width:5px;height:14px;border-radius:3px;background:#0099ff;flex-shrink:0}
+.payload-layout{display:grid;grid-template-columns:minmax(0,1fr) 365px;gap:12px;min-height:0;flex:1}
+.viewer-card{display:flex;flex-direction:column;gap:10px}.panelhead{display:flex;align-items:center;gap:8px}.panelhead h2{margin-right:auto}.framecount{font:11px Consolas,monospace;color:var(--muted)}
+.viewer{position:relative;flex:1;min-height:0;background:#07101c;border:1px solid #21324a;border-radius:5px;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none}
+.viewer img{position:relative;max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;user-select:none}
+.empty{text-align:center;color:#718aa8;font:12px Consolas,monospace;line-height:25px}.empty svg{display:block;margin:0 auto 16px;color:#3e597b}
+.view-overlay{position:absolute;top:12px;left:12px;padding:6px 9px;background:#071322c9;border:1px solid #263b56;border-radius:4px;color:#9db8d9;font:10px Consolas,monospace;z-index:2}
+.viewtools{display:flex;align-items:center;gap:7px}.viewtools button{font-size:11px;padding:6px 10px}.viewtools .info{font:11px Consolas,monospace;color:var(--muted);margin-left:auto}
+.payload-side{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:12px;min-height:0}
+.telemetry{display:grid;gap:7px;margin-top:12px}.telemetry .metric{padding:8px 10px;font-size:12px;border:1px solid var(--line);border-radius:5px;background:var(--inset);display:flex;align-items:center;gap:9px;color:var(--muted)}.value{margin-left:auto;color:var(--text);font-family:Consolas,monospace;font-size:12px}
+.actionbuttons{display:grid;gap:8px;margin-top:12px}.actionbuttons button{padding:9px 12px;font-size:12px;font-weight:600}
+.request{background:#008dff;border-color:#008dff;color:white}.download{background:#00bd80;border-color:#00bd80;color:white}.reset{background:var(--card);border-color:var(--line);color:#c44c62}
+button:disabled{opacity:.42;cursor:default}
+.terminal{padding:0;overflow:hidden;display:flex;flex-direction:column}.terminalhead{display:flex;align-items:center;gap:7px;padding:12px}.terminalhead h2{margin-right:auto}.lights{display:flex;gap:4px}.lights i{width:7px;height:7px;border-radius:50%;background:var(--c)}.terminalhead button{padding:4px 8px;font-size:10px}
+.log{flex:1;min-height:0;overflow:auto;background:#081423;padding:12px;color:#94b1d2;font:11px/1.75 Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}.log .ok{color:#23d89e}.log .warn{color:#ffc568}.log .info{color:#56c5ff}
+.mini-status{display:inline-flex;align-items:center;gap:6px;color:#7791b7;font-size:11px}.mini-status:before{content:'';background:#a1b1c7;width:6px;height:6px;border-radius:50%}
+.mini-status.live{color:#0a9d6c}.mini-status.live:before{background:#19c98a}
+
+:root{--bg:#f2f5f8;--card:#ffffff;--text:#24374b;--muted:#708195;--line:#e1e7ee;--blue:#2879bb;--inset:#f8fafc}
+body{font-family:'Segoe UI',Arial,sans-serif;color:var(--text)}
+.card{border:1px solid #dde5ed!important;border-radius:9px!important;box-shadow:0 2px 6px #233b5205,0 8px 20px #233b5203!important}
+h2:before{background:#478bb9;width:3px;border-radius:2px}
+.telemetry .metric label{color:#74859a!important}
+</style></head><body><main>
+<div class="payload-layout">
+  <section class="card viewer-card">
+    <div class="panelhead"><h2>ORBITAL MICROSCOPE · IMAGE VIEWER</h2><span class="framecount">IMAGES: <b id="frames">0</b></span></div>
+    <div class="viewer" id="viewer">
+      <div class="view-overlay" id="overlay">NO IMAGE</div>
+      <div class="empty" id="empty"><svg width="58" height="48" viewBox="0 0 58 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="54" height="44" rx="5"/><circle cx="18" cy="16" r="5"/><path d="M3 38l16-13 11 9 9-14 16 18"/></svg>NO IMAGE RECEIVED<br><span style="font:11px Segoe UI,sans-serif">Pide una captura o espera a que llegue una por programación</span></div>
+      <img id="image" alt="Payload image preview" hidden draggable="false">
+    </div>
+    <div class="viewtools">
+      <button id="minus" aria-label="Zoom out">−</button><button id="plus" aria-label="Zoom in">+</button><button id="fit">Fit to view</button>
+      <span class="info" id="dimensions">— × — px</span><span class="info" id="zoomlabel">100%</span>
+    </div>
+  </section>
+  <div class="payload-side">
+    <section class="card">
+      <div class="panelhead"><h2>PAYLOAD TELEMETRY</h2><span class="mini-status" id="ministatus">Sin datos</span></div>
+      <div class="telemetry">
+        <div class="metric"><label>Sensor Temp.</label><span class="value" id="temp">— — °C</span></div>
+        <div class="metric"><label>Focus Position</label><span class="value" id="focus">— —</span></div>
+        <div class="metric"><label>Imágenes recibidas</label><span class="value" id="captured">0</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>PAYLOAD ACTIONS</h2>
+      <div class="actionbuttons">
+        <button class="request" id="request">Solicitar imagen (PHOTO)</button>
+        <button class="download" id="download" disabled>Descargar original</button>
+        <button class="reset" id="reset">Reset visor</button>
+      </div>
+    </section>
+    <section class="card terminal">
+      <div class="terminalhead"><div class="lights"><i style="--c:#ff5571"></i><i style="--c:#ffbd40"></i><i style="--c:#0acb91"></i></div><h2>PAYLOAD TERMINAL</h2><button id="clear">Clear</button></div>
+      <div class="log" id="log" role="log" aria-live="off"></div>
+    </section>
+  </div>
+</div>
+</main>
+<script src="/dashboard-common.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let zoom=1,offset=[0,0],drag=null,hasImage=false;
+function log(text,kind=''){const e=document.createElement('div');e.textContent='['+new Date().toISOString().slice(11,19)+'] '+text;e.className=kind;$('log').append(e);while($('log').children.length>150)$('log').firstChild.remove();$('log').scrollTop=$('log').scrollHeight}
+log('Visor de payload listo.');
+function transform(){$('image').style.transform=`translate(${offset[0]}px,${offset[1]}px) scale(${zoom})`;$('zoomlabel').textContent=Math.round(zoom*100)+'%'}
+function fitImage(){zoom=1;offset=[0,0];transform()}
+function zoomTo(v){zoom=Math.max(.25,Math.min(5,v));transform()}
+$('plus').onclick=()=>zoomTo(zoom*1.2);$('minus').onclick=()=>zoomTo(zoom/1.2);$('fit').onclick=fitImage;
+$('viewer').addEventListener('wheel',e=>{if(!hasImage)return;e.preventDefault();zoomTo(zoom*(e.deltaY>0?.9:1.1))},{passive:false});
+$('viewer').onpointerdown=e=>{if(!hasImage)return;drag=[e.clientX,e.clientY,...offset];e.currentTarget.setPointerCapture(e.pointerId)};
+$('viewer').onpointermove=e=>{if(!drag)return;offset=[drag[2]+(e.clientX-drag[0]),drag[3]+(e.clientY-drag[1])];transform()};
+$('viewer').onpointerup=$('viewer').onpointercancel=()=>drag=null;
+
+let currentFilename=null
+async function refreshImages(){
+  try{
+    const res = await fetch('/api/images')
+    if(!res.ok) return
+    const {images} = await res.json()
+    $('captured').textContent = images.length
+    $('frames').textContent = images.length
+    if(!images.length) return
+    const latest = [...images].sort((a,b)=>b.modified-a.modified)[0]
+    if(latest.filename === currentFilename) return
+    currentFilename = latest.filename
+    const url = `/api/images/${encodeURIComponent(latest.filename)}`
+    const img = new Image()
+    img.onload = () => {
+      $('image').src = url
+      $('image').hidden = false
+      $('empty').hidden = true
+      $('overlay').textContent = latest.filename
+      $('dimensions').textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px'
+      $('download').disabled = false
+      hasImage = true
+      fitImage()
+      log('Imagen recibida: ' + latest.filename, 'ok')
+    }
+    img.src = url
+  }catch{}
+}
+
+$('download').onclick = () => {
+  if (!currentFilename) return
+  const a = document.createElement('a')
+  a.href = `/api/images/${encodeURIComponent(currentFilename)}`
+  a.download = currentFilename
+  a.click()
+  log('Descarga iniciada: ' + currentFilename, 'ok')
+}
+
+$('reset').onclick = () => {
+  $('image').removeAttribute('src')
+  $('image').hidden = true
+  $('empty').hidden = false
+  $('overlay').textContent = 'NO IMAGE'
+  $('dimensions').textContent = '— × — px'
+  $('download').disabled = true
+  hasImage = false
+  currentFilename = null
+  fitImage()
+  log('Visor reiniciado (solo visual, no se envió ningún comando).', 'info')
+}
+
+$('request').onclick = async () => {
+  $('request').disabled = true
+  try {
+    const fireAt = new Date(Date.now() + 2000).toISOString()
+    const res = await fetch('/api/schedule/once', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'PHOTO', fire_at: fireAt, enabled: true }),
+    })
+    if (!res.ok) throw new Error(String(res.status))
+    log('Comando PHOTO programado — llegará por el mismo canal que las demás capturas.', 'ok')
+  } catch (e) {
+    log('No se pudo programar PHOTO: ' + e, 'warn')
+  } finally {
+    setTimeout(() => { $('request').disabled = false }, 3000)
+  }
+}
+
+$('clear').onclick = () => $('log').replaceChildren()
+
+async function refreshStatus(){
+  try{
+    const res = await fetch('/api/status')
+    if(!res.ok) return
+    const s = await res.json()
+    $('ministatus').textContent = s.zmq_connected ? 'Enlace activo' : 'Sin enlace'
+    $('ministatus').classList.toggle('live', !!s.zmq_connected)
+  }catch{}
+}
+
+refreshImages()
+refreshStatus()
+setInterval(refreshImages, 5000)
+setInterval(refreshStatus, 5000)
+</script>
+</body></html>

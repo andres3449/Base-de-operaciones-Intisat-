@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Actitud 3D — INTISAT-1</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#070b14;font-family:'JetBrains Mono',monospace;}
+  #c{width:100%;height:100%;display:block;cursor:grab;}
+  #c:active{cursor:grabbing;}
+  .ov{position:absolute;pointer-events:none;color:#94a3b8;font-size:9px;}
+  #legend{left:10px;bottom:8px;display:flex;gap:6px;background:rgba(2,6,23,.7);border:1px solid #1e293b;padding:3px 7px;border-radius:5px;}
+  #legend b.x{color:#fb7185}#legend b.y{color:#34d399}#legend b.z{color:#38bdf8}
+  #hint{right:10px;bottom:8px;opacity:.8;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="legend" class="ov"><span><b class="x">+X</b> Roll</span>·<span><b class="y">+Y</b> Pitch</span>·<span><b class="z">+Z</b> Yaw</span></div>
+<div id="hint" class="ov">Rotación 360° activa (Arrastrar)</div>
+<script>
+(function(){
+"use strict";
+
+var canvas = document.getElementById('c');
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b14);
+
+var camera = new THREE.PerspectiveCamera(42, canvas.clientWidth/canvas.clientHeight, 0.1, 1000);
+camera.position.set(3.8, 2.5, 4.8);
+camera.lookAt(0,0,0);
+
+var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+var sun = new THREE.DirectionalLight(0xfffaed, 1.8); sun.position.set(6,8,5); scene.add(sun);
+var glow = new THREE.DirectionalLight(0x38bdf8, 0.6); glow.position.set(-5,-5,-3); scene.add(glow);
+
+var grid = new THREE.GridHelper(8, 16, 0x1e293b, 0x0f172a);
+grid.position.y = -1.6;
+scene.add(grid);
+
+// ── Cuerpo del CubeSat 3U (mismo modelo que el molde de referencia) ──────
+var sat = new THREE.Group();
+
+var chassis = new THREE.Mesh(
+  new THREE.BoxGeometry(1.2, 3.2, 1.2),
+  new THREE.MeshStandardMaterial({color:0x1e293b, metalness:0.85, roughness:0.25})
+);
+sat.add(chassis);
+
+var railMat = new THREE.MeshStandardMaterial({color:0xf59e0b, metalness:0.9, roughness:0.3});
+var edgeGeo = new THREE.BoxGeometry(0.08, 3.24, 0.08);
+[[-0.6,0,-0.6],[0.6,0,-0.6],[-0.6,0,0.6],[0.6,0,0.6]].forEach(function(p){
+  var rail = new THREE.Mesh(edgeGeo, railMat);
+  rail.position.set(p[0],p[1],p[2]);
+  sat.add(rail);
+});
+
+var solarMat = new THREE.MeshStandardMaterial({color:0x0369a1, metalness:0.6, roughness:0.15});
+var wingGeo = new THREE.BoxGeometry(0.04, 2.8, 1.8);
+var wingL = new THREE.Mesh(wingGeo, solarMat); wingL.position.set(-1.6,0,0); sat.add(wingL);
+var wingR = new THREE.Mesh(wingGeo, solarMat); wingR.position.set(1.6,0,0); sat.add(wingR);
+
+var lens = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.32,0.36,0.25,32),
+  new THREE.MeshStandardMaterial({color:0x0284c7, metalness:0.95, roughness:0.1})
+);
+lens.rotation.x = Math.PI/2;
+lens.position.set(0,-0.5,0.7);
+sat.add(lens);
+
+var antenna = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.015,0.015,1.4,16),
+  new THREE.MeshStandardMaterial({color:0xe2e8f0, metalness:0.9, roughness:0.2})
+);
+antenna.position.set(0,2.2,0);
+sat.add(antenna);
+
+sat.add(new THREE.AxesHelper(2.4));
+scene.add(sat);
+
+// ── Cuaternión real: llega por postMessage desde el Dashboard React
+// ({type:'quat', w,x,y,z}) -- si nunca llega ninguno (sin datos reales
+// todavia), queda con una rotación lenta neutra en vez de inventar attitude. ──
+var haveRealQuat = false;
+var targetQ = new THREE.Quaternion(0, 0.15, 0, 0.99).normalize();
+var idleAngle = 0.4;
+
+var isWireframe = false;
+window.addEventListener('message', function(ev){
+  var d = ev.data;
+  if (!d) return;
+  if (d.type === 'quat') {
+    haveRealQuat = true;
+    // OPS/ADCS quaternion viene como (w,x,y,z); Three.js Quaternion es (x,y,z,w)
+    targetQ.set(d.x, d.y, d.z, d.w).normalize();
+  } else if (d.type === 'reset-view') {
+    dragQ.identity();
+  } else if (d.type === 'toggle-wireframe') {
+    isWireframe = !isWireframe;
+    sat.traverse(function(child){
+      if (child.isMesh && child.material) child.material.wireframe = isWireframe;
+    });
+  }
+});
+
+var isDragging = false, prev = {x:0,y:0}, dragQ = new THREE.Quaternion();
+function onDown(e){ isDragging = true; var p = e.touches?e.touches[0]:e; prev = {x:p.clientX,y:p.clientY}; }
+function onMove(e){
+  if (!isDragging) return;
+  var p = e.touches?e.touches[0]:e;
+  var dx = p.clientX - prev.x, dy = p.clientY - prev.y;
+  var qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), dx*0.008);
+  var qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), dy*0.008);
+  dragQ.multiply(qx).multiply(qy);
+  prev = {x:p.clientX,y:p.clientY};
+}
+function onUp(){ isDragging = false; }
+canvas.addEventListener('mousedown', onDown);
+window.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onUp);
+canvas.addEventListener('touchstart', onDown, {passive:true});
+window.addEventListener('touchmove', onMove, {passive:true});
+window.addEventListener('touchend', onUp);
+
+function resize(){
+  var w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function sendHud(q){
+  var e = new THREE.Euler().setFromQuaternion(q, 'XYZ');
+  var toDeg = function(r){ return (r*180/Math.PI).toFixed(1); };
+  parent.postMessage({type:'attitude-hud', roll:toDeg(e.x), pitch:toDeg(e.y), yaw:toDeg(e.z), real: haveRealQuat}, '*');
+}
+
+var lastHud = 0;
+function animate(t){
+  requestAnimationFrame(animate);
+
+  if (!haveRealQuat && !isDragging) {
+    idleAngle += 0.002;
+    targetQ.setFromAxisAngle(new THREE.Vector3(0,1,0), idleAngle);
+  }
+
+  var displayQ = targetQ.clone().multiply(dragQ);
+  sat.quaternion.slerp(displayQ, 0.12);
+
+  if (!lastHud || t - lastHud > 200) {
+    sendHud(sat.quaternion);
+    lastHud = t;
+  }
+
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>

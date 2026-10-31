@@ -1,0 +1,423 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTISAT — Sun-Synchronous Orbit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="/orbit-ui/orbit.css">
+<script src="/orbit-ui/orbit-core.js"></script>
+</head><body class="space space-full ui-away">
+<div class="shell">
+  <header id="hdr"></header>
+  <div class="grid-layout">
+    <aside class="left-col">
+      <div class="panel">
+        <div class="panel-header">Satellites <small id="sat-count"></small></div>
+        <div class="panel-body"><div class="obj-list" id="sat-list"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">SSO check <span class="tag" id="sso-tag">—</span></div>
+        <div class="panel-body">
+          <div class="kv"><span>Node / Sun</span><b id="sso-rate">—</b></div>
+          <div class="kv"><span>Inclination</span><b id="sso-inc">—</b></div>
+          <div class="kv"><span>SSO inclination here</span><b id="sso-ireq">—</b></div>
+          <div class="kv"><span>LTAN / LTDN</span><b id="sso-ltan">—</b></div>
+          <div class="kv"><span>LTAN drift</span><b id="sso-drift">—</b></div>
+          <div class="kv"><span>Beta angle</span><b id="sso-beta">—</b></div>
+          <div class="kv"><span>Eclipse per orbit</span><b id="sso-ecl">—</b></div>
+          <p class="note">Sun-synchronous when the J2 node drift matches the Sun's 0.9856°/day: the orbit plane keeps a fixed angle to the Sun and LTAN stays constant. Estimated from the TLE only.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Scene time</div>
+        <div class="panel-body" id="time"></div>
+      </div>
+    </aside>
+
+    <main class="center-col">
+      <div class="viewport-wrap">
+        <div class="viewport-card">
+          <div class="viewport-title"><span id="view-title">Sun-synchronous view</span><small id="cam-mode">Solar system · schematic, sizes not to scale</small></div>
+          <div class="globe" id="solar"></div>
+          <div class="globe off" id="globe"></div>
+          <div class="coverage-key" id="key-solar"><div><i></i>ORBIT PLANE · NOW</div><div><i class="ghost"></i>PLANE · EACH MONTH</div><div><i class="term"></i>EARTH ORBIT</div></div>
+          <div class="coverage-key" id="key-globe" hidden><div><i></i>ORBIT (ALT ×3.6)</div><div><i class="term"></i>TERMINATOR</div></div>
+          <div class="event-log" id="event-log"></div>
+          <div class="hud sat-hud" id="sat-hud">
+            <div class="title"><span id="hud-name">—</span><span id="hud-sun">—</span></div>
+            <div class="row"><span>Local solar time</span><span id="hud-lst">—</span></div>
+            <div class="row"><span>Lat / Lon</span><span id="hud-ll">—</span></div>
+            <div class="row"><span>Altitude</span><span id="hud-alt">—</span></div>
+            <div class="row"><span>Sub-solar</span><span id="hud-ssp">—</span></div>
+            <div class="row"><span>Sun distance</span><span id="hud-au">—</span></div>
+          </div>
+        </div>
+        <div class="bottom-dock" aria-label="Sun view toolbar">
+          <button class="dock-btn on" id="cam-system" title="Solar system · Sun at the centre">☀</button>
+          <button class="dock-btn" id="cam-earth" title="Solar frame · close on the Earth">◍</button>
+          <button class="dock-btn" id="cam-term" title="Detailed Earth · Sun-fixed camera on the terminator">◐</button>
+          <span></span>
+          <button class="dock-btn on" id="btn-grid" title="Lat/lon grid">⌘</button>
+          <button class="dock-btn on" id="btn-labels" title="Labels">☷</button>
+          <span></span>
+          <button class="dock-btn" id="btn-full" title="Fullscreen">⛶</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="right-col">
+      <div class="panel">
+        <div class="panel-header">Orbit plane · one year <small>top view</small></div>
+        <div class="panel-body">
+          <svg class="sun-diagram" id="year-diagram" viewBox="0 0 200 200" role="img" aria-label="Orbit plane orientation over one year around the Sun"></svg>
+          <div class="diagram-key"><span><i class="plane"></i>Orbit plane (J2 drift)</span><span><i class="fixed"></i>Fixed plane, no drift</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Over the year</div>
+        <div class="panel-body">
+          <div class="chart-caption"><span>LTAN · next 365 d</span><span id="ltan-range"></span></div>
+          <svg class="mini-chart" id="chart-ltan"></svg>
+          <div class="chart-caption"><span>Beta angle · next 365 d</span><span id="beta-range"></span></div>
+          <svg class="mini-chart" id="chart-beta"></svg>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Illumination · next 12 h</div>
+        <div class="panel-body">
+          <svg class="ecl-bar" id="ecl-bar" viewBox="0 0 300 26" preserveAspectRatio="none"></svg>
+          <div class="ecl-axis"><span>now</span><span>+6 h</span><span>+12 h</span></div>
+          <div class="kv"><span>Next eclipse entry</span><b id="e-next">—</b></div>
+          <div class="kv"><span>Next eclipse length</span><b id="e-len">—</b></div>
+          <div class="kv"><span>Sunlit share</span><b id="e-share">—</b></div>
+          <p class="note">Cylindrical Earth shadow, no penumbra.</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict'
+  const O = Orbit, $ = (id) => document.getElementById(id), DAY = 86400000
+  O.mountHeader($('hdr'), 'Sun-Synchronous Orbit')
+
+  /* Solar-system scene. Directions are real (Sun model + TLE); sizes are schematic:
+     1 AU = 100 units, Sun r = 23, Earth r = 3.2, satellite orbit r = 7.2. Drawn in
+     ecliptic coordinates so the Earth's orbit lies flat and its spin axis is tilted. */
+  function createSolar(container, frame) {
+    const AU = 100, R_SUN = 23, R_EARTH = 3.2, R_ORBIT = 7.2, EPS = 23.439 * O.DEG
+    const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(38, 1, 0.1, 5000)
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+    container.appendChild(renderer.domElement)
+    const labels = document.createElement('div'); labels.className = 'globe-labels'; container.appendChild(labels)
+    const resize = () => { const w = Math.max(1, container.clientWidth), h = Math.max(1, container.clientHeight); renderer.setSize(w, h, false); camera.aspect = w / h; O.frameCamera(camera, container, frame, -38) }
+    const ro = new ResizeObserver(resize); ro.observe(container); if (frame) ro.observe(frame); resize()
+    // ECI vector -> ecliptic-flat scene (y up = ecliptic north)
+    const toScene = (v) => { const ye = Math.cos(EPS) * v[1] + Math.sin(EPS) * v[2], ze = -Math.sin(EPS) * v[1] + Math.cos(EPS) * v[2]; return new THREE.Vector3(v[0], ze, -ye) }
+
+    const N = 1800, pos = new Float32Array(N * 3)
+    for (let k = 0; k < N; k++) { const r = 1600 + Math.random() * 800, th = Math.random() * 2 * Math.PI, ph = Math.acos(2 * Math.random() - 1); pos.set([r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)], k * 3) }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+    scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ size: 2.2, color: 0x8ea3b5, transparent: true, opacity: 0.6, depthWrite: false })))
+
+    // Sun: procedural granulation texture with limb darkening
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256
+    const cx = cv.getContext('2d'); cx.fillStyle = '#f59e0b'; cx.fillRect(0, 0, 512, 256)
+    for (let k = 0; k < 5200; k++) { const l = 52 + Math.random() * 18; cx.fillStyle = 'hsla(' + (34 + Math.random() * 14) + ',100%,' + l + '%,' + (0.25 + Math.random() * 0.35) + ')'; cx.beginPath(); cx.arc(Math.random() * 512, Math.random() * 256, 1 + Math.random() * 4, 0, 7); cx.fill() }
+    const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(R_SUN, 64, 48), new THREE.ShaderMaterial({
+      uniforms: { map: { value: new THREE.CanvasTexture(cv) } },
+      vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }',
+      fragmentShader: 'uniform sampler2D map; varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ float mu=max(dot(vN,vV),0.0); vec3 c=texture2D(map,vUv).rgb*(0.55+0.45*pow(mu,0.6)); gl_FragColor=vec4(c*1.15,1.0); }',
+    }))
+    scene.add(sunMesh)
+    scene.add(new THREE.AmbientLight(0xffffff, 0.2))
+    scene.add(new THREE.PointLight(0xfff4e0, 1.9, 0, 0))
+
+    // Earth orbit from one year of the Sun model
+    const yearPts = []
+    for (let d = 0; d <= 366; d += 2) { const s = O.sunEci(Date.UTC(2026, 0, 1) + d * DAY); yearPts.push(toScene(s.u).multiplyScalar(-AU * s.au)) }
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(yearPts), new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.45 })))
+
+    // Earth, textured, oriented by GMST and the axial tilt
+    const earth = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH, 48, 32), new THREE.MeshPhongMaterial({ map: new THREE.TextureLoader().load('/orbit-textures/earth-day.jpg'), shininess: 6 }))
+    earth.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -R_EARTH * 1.7, 0), new THREE.Vector3(0, R_EARTH * 1.7, 0)]), new THREE.LineBasicMaterial({ color: 0x94a3b8 })))
+    scene.add(earth)
+
+    // satellite orbit plane at the Earth: disc + ring + satellite dot, and the Earth–Sun line
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(R_ORBIT, 64), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false }))
+    const ring = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x38bdf8 }))
+    const satDot = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), new THREE.MeshBasicMaterial({ color: 0xfacc15 }))
+    const sunLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xfbbf24, dashSize: 3, gapSize: 2.5, transparent: true, opacity: 0.6 }))
+    scene.add(disc, ring, satDot, sunLine)
+
+    // one ghost Earth + plane for each month ahead
+    const ghosts = []
+    for (let k = 1; k < 12; k++) {
+      const gE = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH * 0.55, 16, 12), new THREE.MeshPhongMaterial({ color: 0x3b6ea8 }))
+      const gR = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.6 }))
+      scene.add(gE, gR); ghosts.push({ k, gE, gR })
+    }
+
+    function label(text, cls) { const el = document.createElement('div'); el.className = 'globe-label ' + (cls || ''); el.textContent = text; labels.appendChild(el); return el }
+    const lSun = label('SUN', 'sun'), lEarth = label('EARTH · NOW', 'earth'), lSat = label('', 'sat')
+    ghosts.forEach((g) => { g.label = label('', 'month') })
+    function place(el, v, show) {
+      const p = v.clone().project(camera)
+      el.style.display = show && p.z < 1 ? 'block' : 'none'
+      el.style.left = (p.x * 0.5 + 0.5) * container.clientWidth + 'px'
+      el.style.top = (-p.y * 0.5 + 0.5) * container.clientHeight + 'px'
+    }
+
+    // orbit plane basis (ECI) at t: P to the ascending node, Q 90° ahead in-plane, h normal
+    function planeAt(s, t) {
+      const W = s.raan0 + s.raanDot * (t - s.epochMs) / 1000, i = s.i
+      return { P: [Math.cos(W), Math.sin(W), 0], Q: [-Math.sin(W) * Math.cos(i), Math.cos(W) * Math.cos(i), Math.sin(i)], h: [Math.sin(W) * Math.sin(i), -Math.cos(W) * Math.sin(i), Math.cos(i)] }
+    }
+    function ringPoints(pl, c, r) {
+      const P = toScene(pl.P), Q = toScene(pl.Q), pts = []
+      for (let k = 0; k <= 96; k++) { const a = (k / 96) * 2 * Math.PI; pts.push(c.clone().addScaledVector(P, r * Math.cos(a)).addScaledVector(Q, r * Math.sin(a))) }
+      return pts
+    }
+    const earthAt = (t) => { const s = O.sunEci(t); return toScene(s.u).multiplyScalar(-AU * s.au) }
+
+    // camera orbits a target; drag rotates, wheel zooms. Angles, range and target
+    // ease toward their goals, so a mode change is a flight, not a cut.
+    let mode = 'system', az = -0.6, el = 0.62, azT = az, elT = el, drag = null
+    const dist = { system: 330, earth: 46 }, target = new THREE.Vector3(), origin = new THREE.Vector3()
+    let lastT = performance.now(), range = 1500 // arrival: start far out and close in on the system
+    const wrap = (a) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI))
+    const cnv = renderer.domElement
+    cnv.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY }; cnv.setPointerCapture(e.pointerId) })
+    cnv.addEventListener('pointermove', (e) => { if (!drag) return; azT -= (e.clientX - drag.x) * 0.005; elT = Math.max(-1.3, Math.min(1.45, elT + (e.clientY - drag.y) * 0.005)); drag = { x: e.clientX, y: e.clientY } })
+    cnv.addEventListener('pointerup', () => { drag = null })
+    cnv.addEventListener('wheel', (e) => { e.preventDefault(); const lim = mode === 'system' ? [90, 900] : [14, 160]; dist[mode] = Math.max(lim[0], Math.min(lim[1], dist[mode] * (e.deltaY > 0 ? 1.1 : 0.9))) }, { passive: false })
+
+    let ghostStamp = -Infinity, ghostKey = ''
+    function update(ms, s) {
+      const E = earthAt(ms)
+      earth.position.copy(E)
+      // sphere texture is ECEF-mapped: ECEF -> ECI (GMST) -> ecliptic scene
+      const th = O.gmst(ms), c = Math.cos(th), sn = Math.sin(th)
+      const col = (v) => toScene([c * v[0] - sn * v[1], sn * v[0] + c * v[1], v[2]])
+      earth.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(col([1, 0, 0]), col([0, 0, 1]), col([0, -1, 0])))
+      const pl = planeAt(s, ms)
+      disc.position.copy(E); disc.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), toScene(pl.h))
+      ring.geometry.dispose(); ring.geometry = new THREE.BufferGeometry().setFromPoints(ringPoints(pl, E, R_ORBIT))
+      ring.material.color.set(s.color); disc.material.color.set(s.color)
+      const p = O.ecefAt(s, ms), r = Math.hypot(p[0], p[1], p[2])
+      satDot.position.copy(E).addScaledVector(toScene([(c * p[0] - sn * p[1]) / r, (sn * p[0] + c * p[1]) / r, p[2] / r]), R_ORBIT)
+      sunLine.geometry.dispose(); sunLine.geometry = new THREE.BufferGeometry().setFromPoints([E, new THREE.Vector3()]); sunLine.computeLineDistances()
+      const key = s.id + s.tle.join()
+      if (Math.abs(ms - ghostStamp) > 6 * 3600000 || ghostKey !== key) {
+        ghostStamp = ms; ghostKey = key
+        for (const g of ghosts) {
+          const t = ms + g.k * 30.4375 * DAY, Eg = earthAt(t)
+          g.gE.position.copy(Eg)
+          g.gR.geometry.dispose(); g.gR.geometry = new THREE.BufferGeometry().setFromPoints(ringPoints(planeAt(s, t), Eg, R_ORBIT * 0.8))
+          g.gR.material.color.set(s.color)
+          g.pos = Eg; g.label.textContent = months[new Date(t).getUTCMonth()]
+        }
+      }
+      // frame-rate independent easing (time constants in ms)
+      const now = performance.now(), dt = Math.min(100, now - lastT), ease = (tau) => O.MOTION ? 1 - Math.exp(-dt / tau) : 1
+      lastT = now
+      az += (azT - az) * ease(110); el += (elT - el) * ease(110)
+      range = Math.exp(Math.log(range) + (Math.log(dist[mode]) - Math.log(range)) * ease(330))
+      target.lerp(mode === 'earth' ? E : origin, ease(230))
+      const d = range
+      camera.position.set(target.x + d * Math.cos(el) * Math.sin(az), target.y + d * Math.sin(el), target.z + d * Math.cos(el) * Math.cos(az))
+      camera.lookAt(target)
+      renderer.render(scene, camera)
+      place(lSun, new THREE.Vector3(0, -R_SUN - 6, 0), true)
+      place(lEarth, E.clone().add(new THREE.Vector3(0, R_ORBIT + 2.5, 0)), true)
+      lSat.textContent = s.name
+      place(lSat, satDot.position, mode === 'earth')
+      for (const g of ghosts) if (g.pos) place(g.label, g.pos.clone().add(new THREE.Vector3(0, R_ORBIT + 1.5, 0)), mode === 'system')
+    }
+    return {
+      update,
+      setMode(m, snap) {
+        // close-up: beside the Earth so the Sun sits behind it in frame
+        if (m === 'earth' && mode !== 'earth') { azT = az + wrap(0.55 + Math.atan2(earth.position.x, earth.position.z) - az); elT = 0.3 }
+        if (m === 'system' && mode !== 'system') elT = 0.62
+        mode = m
+        if (snap) { az = azT; el = elT; range = dist[m]; target.copy(m === 'earth' ? earth.position : origin) }
+      },
+    }
+  }
+
+  const frame = document.querySelector('.viewport-card')
+  const globe = O.createGlobe($('globe'), { sun: true, distance: 21000, intro: false, frame })
+  const GLOBE_D = 21000
+  let camMode = 'system', wasSunlit = null, lastSlow = -Infinity, lastHud = -Infinity
+
+  const hm = (h) => { const m = Math.round(h * 60) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0') }
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const ssoClass = (v) => ({ SSO: 'tag-live', 'NEAR SSO': 'tag-ref' }[v] || 'tag-off')
+
+  function renderSatList() {
+    const list = O.satellites(), active = O.activeSat()
+    $('sat-count').textContent = list.length
+    $('sat-list').innerHTML = list.map((s) => {
+      if (!s.ok) return '<div class="obj" style="cursor:default"><span class="swatch" style="background:#dc4747"></span><span><b>' + O.esc(s.name) + '</b><span class="sub">invalid TLE</span></span><span></span></div>'
+      const v = O.sunSync(s, O.clock.t).sso
+      return '<button class="obj' + (active && s.id === active.id ? ' selected' : '') + '" data-id="' + s.id + '"><span class="swatch" style="background:' + s.color + '"></span><span><b>' + O.esc(s.name) + '</b><span class="sub">LEO · ' + Math.round(s.a - O.RE) + ' km · ' + s.incDeg.toFixed(1) + '°</span></span><span class="tag ' + ssoClass(v) + '">' + v + '</span></button>'
+    }).join('')
+    $('sat-list').querySelectorAll('[data-id]').forEach((b) => b.onclick = () => { O.setActiveSat(b.dataset.id) })
+  }
+
+  function log(text) {
+    const line = document.createElement('div')
+    line.textContent = '[' + O.utcTime(O.clock.t) + '] ' + text
+    const el = $('event-log')
+    el.prepend(line)
+    while (el.children.length > 4) el.lastChild.remove()
+  }
+
+  // orbit plane seen from the celestial north pole, Earth at 12 monthly positions around the Sun
+  function yearDiagram(s, ms) {
+    const c = 100, R = 64, rx = 16, ry = Math.max(1.6, rx * Math.abs(Math.cos(s.i))), f = (v) => v.toFixed(1)
+    const Ofix = (s.raan0 + s.raanDot * (ms - s.epochMs) / 1000) * O.RAD
+    let g = '<circle cx="100" cy="100" r="' + R + '" fill="none" stroke="#cbd5e1" stroke-width=".6" stroke-dasharray="2 2"/>'
+    g += '<circle cx="100" cy="100" r="8" fill="#fbbf24"/><text x="100" y="117" font-size="6" fill="#b45309" text-anchor="middle" font-weight="700">SUN</text>'
+    for (let k = 11; k >= 0; k--) {
+      const t = ms + k * 30.4375 * DAY, u = O.sunEci(t).u, now = k === 0
+      const ex = c - u[0] * R, ey = c + u[1] * R
+      const Om = (s.raan0 + s.raanDot * (t - s.epochMs) / 1000) * O.RAD
+      g += '<line x1="' + f(ex) + '" y1="' + f(ey) + '" x2="100" y2="100" stroke="#f59e0b" stroke-width=".5" opacity="' + (now ? 0.8 : 0.25) + '"/>'
+      g += '<ellipse cx="' + f(ex) + '" cy="' + f(ey) + '" rx="' + rx + '" ry="' + f(ry) + '" transform="rotate(' + f(-Ofix) + ' ' + f(ex) + ' ' + f(ey) + ')" fill="none" stroke="#94a3b8" stroke-width=".6" stroke-dasharray="1.5 1.5" opacity=".75"/>'
+      g += '<ellipse cx="' + f(ex) + '" cy="' + f(ey) + '" rx="' + rx + '" ry="' + f(ry) + '" transform="rotate(' + f(-Om) + ' ' + f(ex) + ' ' + f(ey) + ')" fill="none" stroke="' + s.color + '" stroke-width="' + (now ? 1.6 : 1) + '"/>'
+      g += '<circle cx="' + f(ex) + '" cy="' + f(ey) + '" r="' + (now ? 4 : 3) + '" fill="#1d6fb8" stroke="#fff" stroke-width=".6"/>'
+      const lx = c - u[0] * (R + 26), ly = c + u[1] * (R + 26)
+      g += '<text x="' + f(lx) + '" y="' + f(ly + 2) + '" font-size="' + (now ? 6.5 : 5.5) + '" fill="' + (now ? '#0f172a' : '#64748b') + '" font-weight="' + (now ? 700 : 500) + '" text-anchor="middle">' + (now ? 'NOW' : months[new Date(t).getUTCMonth()]) + '</text>'
+    }
+    $('year-diagram').innerHTML = g
+  }
+
+  function eclipseBar(s, ms) {
+    const span = 12 * 3600000, step = 30000, sunAt = (t) => !O.inEclipse(O.ecefAt(s, t), O.sunEcef(t))
+    let g = '<rect x="0" y="4" width="300" height="18" rx="3" fill="#fde68a"/>', lit = 0, n = 0, start = null, next = null, len = null
+    for (let t = ms; t <= ms + span; t += step) {
+      const on = sunAt(t)
+      n++; if (on) lit++
+      if (!on && start === null) start = t
+      if (start !== null && (on || t + step > ms + span)) {
+        g += '<rect x="' + ((start - ms) / span * 300).toFixed(2) + '" y="4" width="' + Math.max(0.8, (t - start) / span * 300).toFixed(2) + '" height="18" fill="#334155"/>'
+        if (next === null && start > ms && on) { next = start; len = t - start }
+        start = null
+      }
+    }
+    $('ecl-bar').innerHTML = g
+    $('e-next').textContent = next ? O.relTime(next, ms) + ' · ' + O.utcHM(next) + ' UTC' : sunAt(ms) ? 'none in 12 h' : 'in eclipse now'
+    $('e-len').textContent = len ? Math.round(len / 60000) + ' min' : '—'
+    $('e-share').textContent = Math.round(lit / n * 100) + '%'
+  }
+
+  function slowRefresh(ms) {
+    const s = O.activeSat()
+    if (!s) return
+    const ss = O.sunSync(s, ms), tag = $('sso-tag')
+    tag.textContent = ss.sso
+    tag.className = 'tag ' + ssoClass(ss.sso)
+    tag.title = 'Node drift differs from the Sun by ' + ss.drift.toFixed(3) + '°/day'
+    $('sso-rate').textContent = ss.raanRate.toFixed(3) + ' / ' + ss.sunRate.toFixed(3) + '°/d'
+    $('sso-inc').textContent = s.incDeg.toFixed(2) + '°'
+    $('sso-ireq').textContent = Number.isFinite(ss.iReq) ? ss.iReq.toFixed(2) + '°' : 'n/a'
+    $('sso-ltan').textContent = hm(ss.ltan) + ' / ' + hm(ss.ltdn)
+    $('sso-drift').textContent = (ss.ltanDriftMinPerMonth >= 0 ? '+' : '') + ss.ltanDriftMinPerMonth.toFixed(1) + ' min/month'
+    $('sso-beta').textContent = ss.beta.toFixed(1) + '°'
+    $('sso-ecl').textContent = ss.eclipseFrac > 0 ? Math.round(ss.eclipseMin) + ' min · ' + Math.round(ss.eclipseFrac * 100) + '%' : 'none (full sun)'
+    const ltans = [], betas = []
+    for (let k = 0; k <= 73; k++) { const x = O.sunSync(s, ms + k * 5 * DAY); ltans.push(x.ltan); betas.push(x.beta) }
+    O.sparkline($('chart-ltan'), ltans, { color: s.color, floor: Math.min(...ltans) - 0.5, ceil: Math.max(...ltans) + 0.5 })
+    $('ltan-range').textContent = hm(Math.min(...ltans)) + ' … ' + hm(Math.max(...ltans))
+    O.sparkline($('chart-beta'), betas, { color: '#f59e0b', refLine: 0 })
+    $('beta-range').textContent = Math.round(Math.min(...betas)) + '° … ' + Math.round(Math.max(...betas)) + '°'
+    yearDiagram(s, ms)
+    eclipseBar(s, ms)
+  }
+
+  function hud(ms) {
+    const s = O.activeSat()
+    if (!s) return
+    const x = O.state(s, null, ms), su = O.sunEcef(ms)
+    const sLat = Math.asin(su[2]) * O.RAD, sLon = Math.atan2(su[1], su[0]) * O.RAD
+    $('hud-name').textContent = s.name
+    $('hud-sun').textContent = x.sunlit ? 'SUNLIT' : 'ECLIPSE'
+    $('hud-sun').style.color = x.sunlit ? '#d97706' : '#64748b'
+    $('hud-lst').textContent = hm((((12 + (x.longitude - sLon) / 15) % 24) + 24) % 24)
+    $('hud-ll').textContent = x.latitude.toFixed(1) + '° / ' + x.longitude.toFixed(1) + '°'
+    $('hud-alt').textContent = Math.round(x.altitude) + ' km'
+    $('hud-ssp').textContent = sLat.toFixed(1) + '° / ' + sLon.toFixed(1) + '°'
+    $('hud-au').textContent = O.sunEci(ms).au.toFixed(4) + ' AU'
+    if (wasSunlit !== null && x.sunlit !== wasSunlit) log(x.sunlit ? 'Eclipse exit — ' + s.name : 'Eclipse entry — ' + s.name)
+    wasSunlit = x.sunlit
+    $('view-title').textContent = 'Sun-synchronous view · ' + s.name
+  }
+
+  // Detailed globe, Sun-fixed camera: the Earth turns underneath while the Sun
+  // stays put, so a sun-synchronous orbit plane looks still on screen
+  function termDir(ms) {
+    const e = O.sunEcef(ms), S = new THREE.Vector3(e[0], e[2], -e[1]).normalize(), N = new THREE.Vector3(0, 1, 0)
+    return new THREE.Vector3().crossVectors(S, N).normalize().addScaledVector(N, 0.3).normalize()
+  }
+  const solar = createSolar($('solar'), frame)
+  let globeOn = false, fadeUntil = 0
+  const isGlobe = (m) => m === 'term' || m === 'free'
+  function setCam(mode) {
+    camMode = mode
+    for (const m of ['system', 'earth', 'term']) $('cam-' + m).classList.toggle('on', m === mode)
+    const globeMode = isGlobe(mode)
+    if (globeMode !== globeOn) { globeOn = globeMode; fadeUntil = performance.now() + 900 }
+    $('globe').classList.toggle('off', !globeMode); $('key-globe').hidden = !globeMode
+    $('solar').classList.toggle('off', globeMode); $('key-solar').hidden = globeMode
+    if (!globeMode) solar.setMode(mode)
+    $('cam-mode').textContent = { system: 'Solar system · schematic, sizes not to scale', earth: 'Solar frame · Earth close-up, sizes not to scale', term: 'Detailed Earth · Sun-fixed camera', free: 'Detailed Earth · free camera' }[mode]
+  }
+  // Transitions: panels step aside, the camera flies, panels return.
+  // Solar scene <-> detailed globe goes through the Earth close-up and a crossfade.
+  function goCam(mode) {
+    if (mode === camMode) return
+    if (!isGlobe(camMode) && !isGlobe(mode)) return O.stage([[() => setCam(mode), 1800]])
+    if (isGlobe(mode)) return O.stage([
+      [() => solar.setMode('earth'), camMode === 'system' ? 1700 : 150],
+      [() => { globe.setDistance(GLOBE_D); globe.lookFrom(termDir(O.clock.t)); globe.arrive(2000); setCam('term') }, 2100],
+    ])
+    O.stage([
+      [() => { globe.setDistance(GLOBE_D * 4.2); globe.fly(1300) }, 1200],
+      [() => { solar.setMode('earth', true); setCam('earth') }, mode === 'system' ? 700 : 900],
+      [() => { globe.setDistance(GLOBE_D); if (mode === 'system') setCam('system') }, mode === 'system' ? 1800 : 0],
+    ])
+  }
+  $('cam-system').onclick = () => goCam('system')
+  $('cam-earth').onclick = () => goCam('earth')
+  $('cam-term').onclick = () => goCam('term')
+  $('globe').addEventListener('pointerdown', () => { if (camMode === 'term') setCam('free') })
+
+  let gridOn = true, labelsOn = true
+  $('btn-grid').onclick = () => { gridOn = !gridOn; globe.setGrid(gridOn); $('btn-grid').classList.toggle('on', gridOn) }
+  $('btn-labels').onclick = () => { labelsOn = !labelsOn; globe.setLabels(labelsOn); $('btn-labels').classList.toggle('on', labelsOn) }
+  $('btn-full').onclick = () => { const sh = document.querySelector('.shell'); document.fullscreenElement ? document.exitFullscreen() : sh.requestFullscreen && sh.requestFullscreen() }
+
+  O.mountTimePanel($('time'), { speeds: [1, 3600, 86400], onJump: () => { lastSlow = -Infinity; wasSunlit = null } })
+  O.onCatalog(() => { renderSatList(); lastSlow = -Infinity; wasSunlit = null })
+  renderSatList()
+  log('Sun model ready')
+  O.stage([[() => {}, 2300]], 0)
+
+  O.loop((ms) => {
+    const s = O.activeSat(), st = O.activeStation()
+    if (!s) return
+    const now = performance.now(), both = now < fadeUntil
+    if (globeOn || both) {
+      if (camMode === 'term') globe.lookFrom(termDir(ms))
+      globe.update(ms, { focus: s.id, station: st.id, linkStations: [st.id], only: [s.id] })
+    }
+    if (!globeOn || both) solar.update(ms, s)
+    if (now - lastHud > 200) { lastHud = now; hud(ms); O.updateHeaderClock(ms) }
+    if (now - lastSlow > (O.clock.speed >= 3600 ? 1000 : 15000)) { lastSlow = now; slowRefresh(ms) }
+  })
+})()
+</script>
+</body></html>
